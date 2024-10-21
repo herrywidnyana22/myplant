@@ -9,7 +9,7 @@ interface CustomInputProps{
     type?: "text" | "password" | "number" | "hidden" | "radio" | "checkbox"
     readOnly?: boolean
     className?: string
-    onChange?: (value: any) => void | void
+    onChange?: () => void | void
     editMode?: boolean
     required?: boolean
 }

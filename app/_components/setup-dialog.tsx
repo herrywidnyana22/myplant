@@ -11,7 +11,6 @@ type SetupDialogProps = {
     setIsOpen: (isOpen: boolean) => void
 }
 export const SetupDialog = ({
-    isChecked,
     isOpen,
     setIsOpen,
     setIsChecked,

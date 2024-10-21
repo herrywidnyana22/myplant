@@ -12,9 +12,7 @@ type CustrolButtonProps = {
 export const ControlButton = ({
     onClick,
     className,
-    switchStatus,
     runningStatus,
-    progressStatus,
     iconClassName,
     icon: Icon
 }: CustrolButtonProps) => {
