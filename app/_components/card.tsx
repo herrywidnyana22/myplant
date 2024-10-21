@@ -1,7 +1,10 @@
-import {MQTTClient} from "../_db/mqttClient";
+import { UseKeranStatus } from "../hooks/use-keran-status";
+import { formatCapitalize } from "../utils/format-capitalize";
 import { CardItem } from "./card-item";
+import { ConnectionStatus } from "./connection-status";
 
 export const Card = () => {
+    const keranData = UseKeranStatus()
     return ( 
         <div
             className="
@@ -30,7 +33,7 @@ export const Card = () => {
                 >
                     Device 1
                 </h1>
-                <MQTTClient/>
+                <ConnectionStatus/>
             </div>
             <div 
                 className="
@@ -41,23 +44,17 @@ export const Card = () => {
                     items-center 
                 "
             >
-                <CardItem
-                    label="Keran 1"
-                    status={"ON"}
-                />
-                <CardItem
-                    label="Keran 2"
-                    status={"ON"}
-                />
-                <CardItem
-                    label="Keran 3"
-                    status={"ON"}
-                />
-                <CardItem
-                    label="Keran 4"
-                    status={"OFF"}
-                />
-                
+                {
+                    keranData.map((item, i) =>(
+                        <CardItem
+                            key={i}
+                            id={item.name}
+                            label={formatCapitalize(item.name)}
+                            switchStatus={item.status}
+                            time={item.runtime}
+                        />
+                    ))
+                }
             </div>
         </div>
     );
