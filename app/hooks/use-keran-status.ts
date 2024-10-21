@@ -37,52 +37,59 @@ export const UseKeranStatus = () => {
 
     useEffect(() => {
         if (client) {
-        // Subscribe to the relay status topic
-        client.subscribe('myplant/status', (err) => {
-            if (err) {
-                console.error('Failed to subscribe to relay status:', err);
-            }
-        })
 
-        client.subscribe('myplant/runtime', (err) => {
-            if (err) {
-                console.error('Failed to subscribe to relay runtime:', err);
-            }
-        })
-
-        
-        client.on('message', (topic: string, message: Buffer) => {
-            if (topic === 'myplant/status') {
-                try {
-                    const statusArray: StatusMessage[] = JSON.parse(message.toString());
-                    const newStatusMap: Record<string, KeranStatusProps["switchStatus"]> = {};
-
-                    statusArray.forEach(({ name, status }) => {
-                    newStatusMap[name] = status
-                });
-
-                    setStatusMap(newStatusMap)
-                } catch (error) {
-                    console.error('Failed to parse MQTT status message:', error);
+            client.subscribe('myplant/status', (err) => {
+                if (err) {
+                    console.error('Failed to subscribe to relay status:', err);
                 }
+            })
 
-            } else if (topic === 'myplant/runtime') {
-                try {
-                    const runtimeArray: RuntimeMessage[] = JSON.parse(message.toString());
-                    const newRuntimeMap: Record<string, number> = {};
+            client.subscribe('myplant/runtime', (err) => {
+                if (err) {
+                    console.error('Failed to subscribe to relay runtime:', err);
+                }
+            })
 
-                    runtimeArray.forEach(({ name, runtime }) => {
-                        newRuntimeMap[name] = runtime; // Update the runtime map
+            client.subscribe('myplant/setting', (err) => {
+                if (err) {
+                    console.error('Failed to subscribe to relay runtime:', err);
+                }
+            })
+
+            
+            client.on('message', (topic: string, message: Buffer) => {
+                if (topic === 'myplant/status') {
+                    try {
+                        const statusArray: StatusMessage[] = JSON.parse(message.toString());
+                        const newStatusMap: Record<string, KeranStatusProps["switchStatus"]> = {};
+
+                        statusArray.forEach(({ name, status }) => {
+                        newStatusMap[name] = status
                     });
 
-                    setRuntimeMap(newRuntimeMap); // Update runtimeMap state
-                } catch (error) {
-                    console.error('Failed to parse MQTT runtime message:', error);
-                }
-            }
-        });
+                        setStatusMap(newStatusMap)
+                    } catch (error) {
+                        console.error('Failed to parse MQTT status message:', error);
+                    }
 
-        client.publish('myplant/web', 'init')
+                } else if (topic === 'myplant/runtime') {
+                    try {
+                        const runtimeArray: RuntimeMessage[] = JSON.parse(message.toString());
+                        const newRuntimeMap: Record<string, number> = {};
+
+                        runtimeArray.forEach(({ name, runtime }) => {
+                            newRuntimeMap[name] = runtime; // Update the runtime map
+                        });
+
+                        setRuntimeMap(newRuntimeMap); // Update runtimeMap state
+                    } catch (error) {
+                        console.error('Failed to parse MQTT runtime message:', error);
+                    }
+                }
+            });
+
+            // request initalstate in device when page refresh
+            client.publish('myplant/web', 'init')
         }
     }, [client])
 

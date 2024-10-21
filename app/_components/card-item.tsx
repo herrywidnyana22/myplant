@@ -38,7 +38,7 @@ export const CardItem = ({
         const newMode = modeValue === "AUTO" ? "MANUAL" : "AUTO";
         setModeValue(newMode)
     }
-    const controlKeran = (keranID: typeof id, action: typeof runningStatus) => {
+    const controlKeran = (keranID: string, action: typeof runningStatus) => {
         
         if(client) {// Format message "keran1:ON"
             const topic = 'myplant/control';
