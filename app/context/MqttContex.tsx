@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react';
+
 import mqtt, { MqttClient } from 'mqtt';
 import { MqttStatusProps } from '../types/MqttStatustype';
+import { createContext, useContext, useEffect, useState } from 'react';
 
 const MqttContext = createContext<{
     client: MqttClient | null
@@ -40,16 +41,16 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         return () => {
             mqttClient.end()
-        };
-    }, []);
+        }
+    }, [])
 
     return (
         <MqttContext.Provider value={{ client, connectStatus }}>
             {children}
         </MqttContext.Provider>
-    );
-};
+    )
+}
 
 export const useMqtt = () => {
     return useContext(MqttContext)
-};
+}

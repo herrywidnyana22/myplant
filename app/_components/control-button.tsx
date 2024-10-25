@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import { KeranStatusProps } from "../types/KeranStatusType";
 import { LucideIcon } from "lucide-react";
 
-type CustrolButtonProps = {
+type ControlButtonProps = {
     onClick: () => void
     className?: string 
     icon: LucideIcon 
@@ -12,10 +12,10 @@ type CustrolButtonProps = {
 export const ControlButton = ({
     onClick,
     className,
-    runningStatus,
+    status,
     iconClassName,
     icon: Icon
-}: CustrolButtonProps) => {
+}: ControlButtonProps) => {
     return ( 
         <button 
             onClick={onClick}
@@ -26,7 +26,7 @@ export const ControlButton = ({
                 text-slate-500
                 bg-white
                 shadow-shadow-button-active`,
-                (runningStatus === "START" ||  runningStatus === "PAUSE") && 'shadow-shadow-button',
+                (status !== "OFF") && 'shadow-shadow-button',
                 className
             )}
         >

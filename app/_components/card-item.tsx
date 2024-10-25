@@ -4,104 +4,120 @@ import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Pause, Play, Square } from "lucide-react";
 import { DotStatus } from "./dot-status";
-import { useState } from "react";
 import { KeranStatusProps } from "../types/KeranStatusType";
 import { ControlButton } from "./control-button";
-import { useMqtt } from "../context/MqttContex";
+import { useEffect, useState } from "react";
+
 import TimeCountdown from "./time-countdown";
+import { usePublish } from "../hooks/use-publish";
+import { DurationButton } from "./duration-button";
+import { toast } from "sonner";
+import { useConfirm } from "../hooks/use-confirm";
 
 export type CardItemProps={
-    id:string
+    id:number
     label: string
-    mode?: "AUTO" | "MANUAL"
+    mode: "TIMER" | "NO TIMER"
+    duration: number
     time: number
 } & KeranStatusProps
 
 export const CardItem = ({
     id,
+    duration,
     label,
-    mode="AUTO",
-    switchStatus,
-    runningStatus=switchStatus!=="OFF" ? "START" : null,
-    progressStatus=switchStatus!=="OFF" ? "RUNNING" : "OFF",
+    mode,
+    status,
     time
 
 }: CardItemProps) => {
-    const { client } = useMqtt();
-    const [modeValue, setModeValue] = useState(mode)
-    const [onRunningStatus, setOnRunningStatus] = useState(runningStatus)
-    const [onProgressStatus, setOnProgressStatus] = useState(progressStatus)
+    const { publishMessage } = usePublish()
+    const [durationActive, setDurationActive] = useState("")
+    const [onDuration, setOnDuration] = useState<number>(duration)
+    const [onMode, setOnMode] = useState(mode)
+    const [onStatus, setOnStatus] = useState(status)
+
+    const [ConfirmMode, confirm] = useConfirm(
+        "Yakin ingin mengubah ke mode TIMER?",
+        "Ini akan mematikan keran terlebih dahulu"
+    )
 
     const onSwitchChange = async() =>{
-        const newMode = modeValue === "AUTO" ? "MANUAL" : "AUTO";
-        setModeValue(newMode)
-    }
-    const controlKeran = (keranID: string, action: typeof runningStatus) => {
+
+        const modeValue:CardItemProps['mode'] = onMode === "TIMER" ? "NO TIMER" : "TIMER"
         
-        if(client) {// Format message "keran1:ON"
-            const topic = 'myplant/control';
-            const actionValue = action === 'START' ? 'ON' : 'OFF'
-            const message = `${keranID}:${actionValue}`
+        if(onStatus === "RUNNING"){
+            const isOk = await confirm()
+            if(!isOk) return
 
-            client.publish(topic, message, (err) => {
-                if (err) {
-                    console.error('Failed to publish message:', err);
-                } else {
-                    console.log('Message published successfully:', message);
-                }
-            })
-        } else {
-            console.error('MQTT client not connected');
-        }
+            controlKeran("OFF")
+        } 
+        
+        setOnDuration(0)
+        setOnStatus("OFF")
+        setOnMode(modeValue)
+
+   
+
+    }
+    const controlKeran = (action: typeof status) => {
+        
+        const topic = 'myplant/control'
+       
+        const msgSuccess =`${label} ${action} berhasil...`
+        const msgError =`${label} ${action} gagal...`
+
+        const msg = JSON.stringify({
+                        keranID: id,
+                        status: action,
+                        duration: onDuration
+                    });
+        
+        publishMessage({topic, msg, msgSuccess, msgError})
     }
 
-    const onStart = (keranID: typeof id, action: typeof runningStatus) =>{
-        controlKeran(keranID, action)
-        setOnRunningStatus(action)
+    const handleControlButton = (action: typeof status) =>{
+        
+        if(action === "RUNNING" && onDuration === 0 && onMode === "TIMER"){
+            return toast.error("Tentukan durasi terlebih dahulu")
 
-        if(action === "START"){
-            setOnProgressStatus("RUNNING")
+            
         }
 
-        if(action === "PAUSE"){
-            setOnProgressStatus("DELAYED")
-        }
-
-        if(action === "STOP"){
-            setOnProgressStatus("OFF")
-        }
+        setOnStatus(action)
+        controlKeran(action)
+        
     }
+
+    // Update local state whenever props change
+    useEffect(() => {
+        setOnMode(mode)
+        setOnDuration(duration)
+        setOnStatus(status)
+    }, [mode, status, duration]);
 
     return ( 
     <>
-        {/* <SetupDialog
-            label={`Atur ${label}`}
-            isChecked={isCentang}
-            setIsChecked={setIsCentang}
-            isOpen={setupOpen}
-            setIsOpen={setSetupOpen}
-        /> */}
+        <ConfirmMode/>
         <div
             className={cn(`
                 relative
                 bg-primary-1`,
-                status === "OFF"
-                ? 'cursor-not-allowed opacity-50 pointer-events-none'
-                : 'cursor-pointer'
             )}
         >
             <div
                 className={cn(`
-                    size-64
+                    w-64
                     flex
                     flex-col
+                    gap-2
                     justify-between
                     p-6
                     list-none
                     rounded-3xl
                     transition-shadow
                     shadow-card-shadow`, 
-                    onRunningStatus === "START" && 'shadow-card-shadow-inner scale-95'
+                    onStatus === "RUNNING" && 'shadow-card-shadow-inner scale-95'
                     
                 )}
             >
@@ -111,10 +127,16 @@ export const CardItem = ({
                         justify-between
                     "
                 >
-                    <DotStatus connectStatus={"CONNECTED"}/>
+                    <DotStatus connectStatus={onStatus}/>
+                    <div className="text-muted-foreground font-bold">
+                        <TimeCountdown
+                            initialRuntime={time} 
+                            status={onStatus}
+                        />
+                    </div>
                     <Switch 
                         id="mode"
-                        checked={modeValue==="MANUAL"}
+                        checked={onMode==="TIMER"}
                         onCheckedChange={onSwitchChange}
                     />
                 </div>
@@ -136,6 +158,80 @@ export const CardItem = ({
                         { label }
                     </h1>
                 </div>
+                {
+                    (onMode === "TIMER") &&
+                    (
+                    <div 
+                        className="
+                            w-full
+                            py-2
+                            grid 
+                            grid-cols-3 
+                            gap-1 
+                            justify-items-center 
+                            border border-spacing-1
+                            rounded-xl
+                        "
+                    >
+                        <DurationButton
+                            id={`${id}90menit`}
+                            status={status}
+                            initDuration={duration}
+                            duration={90}
+                            durationActive={durationActive} 
+                            setDurationActive={setDurationActive}
+                            setDuration={setOnDuration}
+                        />
+                        <DurationButton
+                            id={`${id}60menit`}
+                            status={status}
+                            initDuration={duration}
+                            duration={60}
+                            durationActive={durationActive} 
+                            setDurationActive={setDurationActive}
+                            setDuration={setOnDuration}
+                        />
+                        <DurationButton
+                            id={`${id}45menit`}
+                            status={status}
+                            initDuration={duration}
+                            duration={45}
+                            durationActive={durationActive} 
+                            setDuration={setOnDuration}
+                            setDurationActive={setDurationActive}
+                        />
+                        <DurationButton
+                            id={`${id}30menit`}
+                            status={status}
+                            initDuration={duration}
+                            duration={30}
+                            durationActive={durationActive} 
+                            setDuration={setOnDuration}
+                            setDurationActive={setDurationActive}
+                        />
+                        <DurationButton
+                            id={`${id}5menit`}
+                            status={status}
+                            initDuration={duration}
+                            duration={5}
+                            durationActive={durationActive} 
+                            setDuration={setOnDuration}
+                            setDurationActive={setDurationActive}
+                        />
+                        <DurationButton
+                            id={`${id}3menit`}
+                            status={status}
+                            initDuration={duration}
+                            duration={3}
+                            durationActive={durationActive} 
+                            setDurationActive={setDurationActive}
+                            setDuration={setOnDuration}
+                        />
+                    </div>
+
+                    )
+
+                }
                 <div 
                     className="
                         flex 
@@ -145,49 +241,35 @@ export const CardItem = ({
                     "
                 >
                     <ControlButton
-                        onClick={() => onStart(id, "STOP")}
-                        switchStatus={switchStatus}
+                        onClick={() => handleControlButton("OFF")}
+                        status={onStatus}
                         icon={Square}
                         iconClassName={"size-5 bg-rose-500 text-rose-500 rounded-sm"}
-                        className={(onRunningStatus === "START" ||  onRunningStatus === "PAUSE") 
+                        className={(onStatus === "RUNNING" ||  onStatus === "PAUSED") 
                             ? 'shadow-shadow-button' 
                             : undefined
                         }
                     />
                     <ControlButton 
-                        onClick={() => onStart(id, "START")}
-                        switchStatus={switchStatus}
+                        onClick={() => handleControlButton("RUNNING")}
+                        status={onStatus}
                         icon={Play}
                         iconClassName={"size-8 text-font-primary"}
-                        className={onRunningStatus === "START" 
+                        className={onStatus === "RUNNING" 
                             ? 'shadow-shadow-button-active'
                             : 'shadow-shadow-button'
                         }
                     />
                     <ControlButton 
-                        onClick={() => onStart(id, "PAUSE")}
-                        switchStatus={switchStatus}
+                        onClick={() => handleControlButton("PAUSED")}
+                        status={onStatus}
                         icon={Pause}
                         iconClassName={"size-5"}
-                        className={onRunningStatus === "PAUSE"  || onRunningStatus !== "START"
+                        className={onStatus === "PAUSED"  || onStatus !== "RUNNING"
                             ? 'shadow-shadow-button-active'
                             : 'shadow-shadow-button'
                         }
                     />
-                </div>
-                <div
-                    className="
-                        flex
-                        justify-between
-                    "
-                >
-                    <span className="text-muted-foreground">{onProgressStatus}</span>
-                    <div className="text-muted-foreground font-bold">
-                        <TimeCountdown
-                            initialRuntime={time} 
-                            onRunningStatus={onRunningStatus}
-                        />
-                    </div>
                 </div>
             </div>
         </div>

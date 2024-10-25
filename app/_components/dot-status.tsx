@@ -1,20 +1,26 @@
 import { cn } from "@/lib/utils";
 import { MqttStatusProps } from "../types/MqttStatustype";
+import { KeranStatusProps } from "../types/KeranStatusType";
+import { Hint } from "./hint";
 
 // Define the props type
 type DotStatusProps = {
-  connectStatus: MqttStatusProps["status"];
+  connectStatus: MqttStatusProps["status"] | KeranStatusProps["status"];
+
 };
 
 export const DotStatus = ({ connectStatus }: DotStatusProps) => {
   return (
-    <span
-      className={cn(
-        `w-4 h-4 rounded-full`,
-        connectStatus === "OFF" && 'bg-rose-500',
-        connectStatus === "CONNECTED" && 'bg-green-500',
-        connectStatus === "RECONNECTING" ||  connectStatus === "CONNECTING" && 'bg-blue-500',
-      )}
-    />
+    <Hint label={connectStatus}>
+      <span
+        className={cn(
+          `w-4 h-4 rounded-full`,
+          connectStatus === "OFF" && 'bg-rose-500',
+          (connectStatus === "CONNECTED"  || connectStatus === "RUNNING") && 'bg-green-500',
+          (connectStatus === "RECONNECTING" ||  connectStatus === "CONNECTING") && 'bg-blue-500',
+          (connectStatus === "PAUSED") && 'bg-orange-500',
+        )}
+      />
+    </Hint>
   );
 };

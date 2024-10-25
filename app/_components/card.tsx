@@ -1,10 +1,18 @@
+import { useEffect, useState } from "react";
 import { UseKeranStatus } from "../hooks/use-keran-status";
 import { formatCapitalize } from "../utils/format-capitalize";
 import { CardItem } from "./card-item";
 import { ConnectionStatus } from "./connection-status";
 
 export const Card = () => {
-    const keranData = UseKeranStatus()
+    const data = UseKeranStatus()
+    const [keranData, setKeranData] = useState(data)
+
+    useEffect(() => {
+        setKeranData(data)
+    }, [data])
+    
+    console.log({keranData})
     return ( 
         <div
             className="
@@ -48,9 +56,11 @@ export const Card = () => {
                     keranData.map((item, i) =>(
                         <CardItem
                             key={i}
-                            id={item.name}
+                            id={i}
                             label={formatCapitalize(item.name)}
-                            switchStatus={item.status}
+                            status={item.status}
+                            duration={item.duration}
+                            mode={(item.duration > 0 && item.status !== "OFF") ? "TIMER" : "NO TIMER"}
                             time={item.runtime}
                         />
                     ))
