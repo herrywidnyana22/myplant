@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface CustomDurationPickerProps {
-    onSelect: (duration: number) => void; // duration in minutes
+    onSelect: (duration: number) => void;
 }
 
 const CustomDurationPicker: React.FC<CustomDurationPickerProps> = ({ onSelect }) => {
@@ -21,15 +21,15 @@ const CustomDurationPicker: React.FC<CustomDurationPickerProps> = ({ onSelect })
             <h2 className="text-lg font-semibold mb-2">Select Duration</h2>
             <div className="flex justify-center items-center space-x-4">
                 {/* Hours Wheel */}
-                <div className="relative w-20 h-40 overflow-hidden">
-                    <div className="absolute inset-y-0 flex flex-col items-center justify-center gap-2">
+                <div className="relative w-20 h-40 overflow-y-scroll scrollbar-hide">
+                    <div className="flex flex-col items-center gap-2">
                         {hours.map((hour) => (
                             <button
                                 key={hour}
                                 onClick={() => setSelectedHours(hour)}
                                 className={`text-lg font-medium ${
                                     hour === selectedHours ? 'text-blue-600' : 'text-gray-400'
-                                } transition-transform`}
+                                }`}
                             >
                                 {hour} h
                             </button>
@@ -38,15 +38,15 @@ const CustomDurationPicker: React.FC<CustomDurationPickerProps> = ({ onSelect })
                 </div>
 
                 {/* Minutes Wheel */}
-                <div className="relative w-20 h-40 overflow-hidden">
-                    <div className="absolute inset-y-0 flex flex-col items-center justify-center gap-2">
+                <div className="relative w-20 h-40 overflow-y-scroll scrollbar-hide">
+                    <div className="flex flex-col items-center gap-2">
                         {minutes.map((minute) => (
                             <button
                                 key={minute}
                                 onClick={() => setSelectedMinutes(minute)}
                                 className={`text-lg font-medium ${
                                     minute === selectedMinutes ? 'text-blue-600' : 'text-gray-400'
-                                } transition-transform`}
+                                }`}
                             >
                                 {minute} m
                             </button>
