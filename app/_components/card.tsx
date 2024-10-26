@@ -13,6 +13,7 @@ export const Card = () => {
     }, [data])
     
     console.log({keranData})
+
     return ( 
         <div
             className="
@@ -60,7 +61,7 @@ export const Card = () => {
                             label={formatCapitalize(item.name)}
                             status={item.status}
                             duration={item.duration}
-                            mode={(item.duration > 0 && item.status !== "OFF") ? "TIMER" : "NO TIMER"}
+                            mode={item.duration > 0 ? "TIMER" : "NO TIMER"}
                             time={item.runtime}
                         />
                     ))

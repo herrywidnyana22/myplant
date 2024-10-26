@@ -6,7 +6,7 @@ import { Pause, Play, Square } from "lucide-react";
 import { DotStatus } from "./dot-status";
 import { KeranStatusProps } from "../types/KeranStatusType";
 import { ControlButton } from "./control-button";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import TimeCountdown from "./time-countdown";
 import { usePublish } from "../hooks/use-publish";
@@ -33,7 +33,7 @@ export const CardItem = ({
 }: CardItemProps) => {
     const { publishMessage } = usePublish()
     const [durationActive, setDurationActive] = useState("")
-    const [onDuration, setOnDuration] = useState<number>(duration)
+    const [onDuration, setOnDuration] = useState(duration)
     const [onMode, setOnMode] = useState(mode)
     const [onStatus, setOnStatus] = useState(status)
 
@@ -42,8 +42,19 @@ export const CardItem = ({
         "Ini akan mematikan keran terlebih dahulu"
     )
 
-    const onSwitchChange = async() =>{
+    // Ref to store the previous onMode
+    const prevModeRef = useRef(mode);
 
+    useEffect(() => {
+        if (prevModeRef.current === "TIMER" && onStatus === "OFF") {
+            setOnMode("TIMER")
+            setDurationActive("")
+        }
+        
+        prevModeRef.current = onMode
+    }, [onStatus])
+
+    const onSwitchChange = async() =>{
         const modeValue:CardItemProps['mode'] = onMode === "TIMER" ? "NO TIMER" : "TIMER"
         
         if(onStatus === "RUNNING"){
@@ -57,8 +68,6 @@ export const CardItem = ({
         setOnStatus("OFF")
         setOnMode(modeValue)
 
-   
-
     }
     const controlKeran = (action: typeof status) => {
         
@@ -71,22 +80,17 @@ export const CardItem = ({
                         keranID: id,
                         status: action,
                         duration: onDuration
-                    });
+                    })
         
         publishMessage({topic, msg, msgSuccess, msgError})
     }
 
     const handleControlButton = (action: typeof status) =>{
-        
         if(action === "RUNNING" && onDuration === 0 && onMode === "TIMER"){
-            return toast.error("Tentukan durasi terlebih dahulu")
-
-            
+            return toast.error("Tentukan durasi terlebih dahulu")            
         }
 
-        setOnStatus(action)
         controlKeran(action)
-        
     }
 
     // Update local state whenever props change
@@ -99,12 +103,7 @@ export const CardItem = ({
     return ( 
     <>
         <ConfirmMode/>
-        <div
-            className={cn(`
-                relative
-                bg-primary-1`,
-            )}
-        >
+        
             <div
                 className={cn(`
                     w-64
@@ -113,27 +112,36 @@ export const CardItem = ({
                     gap-2
                     justify-between
                     p-6
-                    list-none
                     rounded-3xl
                     transition-shadow
-                    shadow-card-shadow`, 
+                    shadow-card-shadow
+                    bg-primary-1`, 
                     onStatus === "RUNNING" && 'shadow-card-shadow-inner scale-95'
                     
                 )}
             >
                 <div
                     className="
+                        relative
                         flex
                         justify-between
                     "
                 >
                     <DotStatus connectStatus={onStatus}/>
-                    <div className="text-muted-foreground font-bold">
-                        <TimeCountdown
-                            initialRuntime={time} 
-                            status={onStatus}
-                        />
-                    </div>
+                    <p 
+                        className="
+                            absolute
+                            -top-2 
+                            left-1/2 
+                            transform 
+                            -translate-x-1/2 
+                            text-md 
+                            font-semibold 
+                            text-font-primary
+                        "
+                    >
+                        {label}
+                    </p>
                     <Switch 
                         id="mode"
                         checked={onMode==="TIMER"}
@@ -148,15 +156,18 @@ export const CardItem = ({
                         text-font-primary
                     "
                 >
-
-                    <h1
+                    <div 
                         className="
-                            text-3xl
+                            text-muted-foreground 
+                            text-xl 
                             font-bold
                         "
                     >
-                        { label }
-                    </h1>
+                        <TimeCountdown
+                            initialRuntime={time} 
+                            status={onStatus}
+                        />
+                    </div>
                 </div>
                 {
                     (onMode === "TIMER") &&
@@ -180,7 +191,7 @@ export const CardItem = ({
                             duration={90}
                             durationActive={durationActive} 
                             setDurationActive={setDurationActive}
-                            setDuration={setOnDuration}
+                            setOnDuration={setOnDuration}
                         />
                         <DurationButton
                             id={`${id}60menit`}
@@ -189,7 +200,7 @@ export const CardItem = ({
                             duration={60}
                             durationActive={durationActive} 
                             setDurationActive={setDurationActive}
-                            setDuration={setOnDuration}
+                            setOnDuration={setOnDuration}
                         />
                         <DurationButton
                             id={`${id}45menit`}
@@ -197,7 +208,7 @@ export const CardItem = ({
                             initDuration={duration}
                             duration={45}
                             durationActive={durationActive} 
-                            setDuration={setOnDuration}
+                            setOnDuration={setOnDuration}
                             setDurationActive={setDurationActive}
                         />
                         <DurationButton
@@ -206,7 +217,7 @@ export const CardItem = ({
                             initDuration={duration}
                             duration={30}
                             durationActive={durationActive} 
-                            setDuration={setOnDuration}
+                            setOnDuration={setOnDuration}
                             setDurationActive={setDurationActive}
                         />
                         <DurationButton
@@ -215,7 +226,7 @@ export const CardItem = ({
                             initDuration={duration}
                             duration={5}
                             durationActive={durationActive} 
-                            setDuration={setOnDuration}
+                            setOnDuration={setOnDuration}
                             setDurationActive={setDurationActive}
                         />
                         <DurationButton
@@ -225,7 +236,7 @@ export const CardItem = ({
                             duration={3}
                             durationActive={durationActive} 
                             setDurationActive={setDurationActive}
-                            setDuration={setOnDuration}
+                            setOnDuration={setOnDuration}
                         />
                     </div>
 
@@ -272,7 +283,6 @@ export const CardItem = ({
                     />
                 </div>
             </div>
-        </div>
     </>
     )
 }

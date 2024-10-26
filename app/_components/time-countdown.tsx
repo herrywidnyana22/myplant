@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { KeranStatusProps } from '../types/KeranStatusType';
 import { cn } from '@/lib/utils';
 import { Hint } from './hint';
+import { formatTime } from '../utils/format-time';
 
 interface TimeCountProps {
   initialRuntime: number
@@ -24,8 +25,6 @@ const TimeCountdown = ({
             interval = setInterval(() => {
                 setRuntime((prev) => prev + 1000) // Increment runtime by 1000 ms (1 second)
             }, 1000)
-        } else if (status === "PAUSED") {
-            // Do nothing (keep current runtime)
         } else if (status === "OFF") {
             setRuntime(0) // Reset the runtime when stopped
         }
@@ -35,7 +34,7 @@ const TimeCountdown = ({
             if (interval) {
                 clearInterval(interval)
             }
-        };
+        }
     }, [status])
 
     // Update runtime only when the component mounts or the initialRuntime changes
@@ -45,28 +44,17 @@ const TimeCountdown = ({
         }
     }, [initialRuntime])
 
-    // Format runtime into HH:MM:SS
-    const formatTime = (milliseconds: number): string => {
-        const seconds = Math.floor(milliseconds / 1000) // Convert milliseconds to seconds
-        const hours = String(Math.floor(seconds / 3600)).padStart(2, '0') // Total hours
-        const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0') // Minutes
-        const secs = String(Math.floor(seconds % 60)).padStart(2, '0') // Seconds
-        return `${hours}:${minutes}:${secs}`
-    }
+    
 
     return (
-        <Hint
-            label={status}
+        <span
+            className={cn('text-slate-500',
+                status === "RUNNING" && 'text-emerald-500',
+                status === "PAUSED" && 'text-orange-500',
+            )}
         >
-            <span
-                className={cn('text-slate-500',
-                    status === "RUNNING" && 'text-emerald-500',
-                    status === "PAUSED" && 'text-orange-500',
-                )}
-            >
-                {formatTime(runtime)}
-            </span>
-        </Hint>
+            {formatTime(runtime)}
+        </span>
     )
 }
 

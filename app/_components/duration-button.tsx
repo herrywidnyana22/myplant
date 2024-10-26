@@ -8,7 +8,7 @@ type DurationButtonProps = {
     duration: number 
     durationActive: string
     setDurationActive: (durationActive: string) => void
-    setDuration:  (duration: number) => void
+    setOnDuration:  (duration: number) => void
     className?: string 
 }
 
@@ -19,18 +19,30 @@ export const DurationButton = ({
     duration,
     durationActive,
     setDurationActive,
-    setDuration,
+    setOnDuration,
     className,
 }: DurationButtonProps) => {
-    
-    const hoursDecimal = (duration / 60).toFixed(1); 
+    const hoursDecimal = (duration / 60).toFixed(1)
+
     const dots = []
     for (let i = 1; i <= 60; i++) { // 60 iterations
         const rotation = i * 6; // Calculate rotation for each dot
         dots.push(
             <div
                 key={i}
-                className="dot absolute w-[3px] h-[1px] bg-orange-500 origin-[22px] right-[89%]"
+                className={cn(`
+                    dot 
+                    absolute 
+                    w-[3px] 
+                    h-[1px] 
+                    right-[89%]
+                    origin-[22px]`,
+                    id === durationActive || 
+                    (initDuration === duration && 
+                    status === "RUNNING") 
+                    ? 'bg-emerald-500'
+                    : 'bg-orange-500'
+                )}
                 style={{ transform: `rotate(${rotation}deg)` }}
             />
         )
@@ -38,7 +50,7 @@ export const DurationButton = ({
 
     const handleClickDuration = () =>{
         setDurationActive(id)
-        setDuration(duration)
+        setOnDuration(duration)
     }
 
     return ( 
