@@ -1,26 +1,36 @@
-import { useEffect, useState } from "react";
-import { UseKeranStatus } from "../hooks/use-keran-status";
-import { formatCapitalize } from "../utils/format-capitalize";
-import { CardItem } from "./card-item";
-import { ConnectionStatus } from "./connection-status";
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useMqtt } from "../context/MqttContex"
+import { ConnectionStatus } from './connection-status';
+import { CardItem } from './card-item';
+import { formatCapitalize } from '../utils/format-capitalize';
+import { UseKeranStatus } from '../hooks/use-keran-status';
 
 export const Card = () => {
     const data = UseKeranStatus()
     const [keranData, setKeranData] = useState(data)
+    const { setConnectStatus } = useMqtt()
 
     useEffect(() => {
-        setKeranData(data)
-    }, [data])
-    
-    console.log({keranData})
+        setKeranData(data);
+        
+        if (!data || data.length === 0) {
+            setConnectStatus("DEVICE DISCONNECTED")
+        } else {
+            setConnectStatus("DEVICE CONNECTED")
+        }
+    }, [data, setConnectStatus])
+
+    console.log({ keranData })
 
     return ( 
         <div
             className="
-                relative 
+                relative
                 w-full
                 rounded-3xl
-                m-24
+                m-52
                 p-5
                 shadow-card-shadow
             "
@@ -44,13 +54,16 @@ export const Card = () => {
                 </h1>
                 <ConnectionStatus/>
             </div>
-            <div 
-                className="
-                    flex 
-                    flex-wrap 
-                    gap-6
-                    justify-center 
-                    items-center 
+            <div
+                className=" 
+                    relative
+                    snap-y
+                    snap-mandatory 
+                    max-h-[520px]
+                    py-2
+                    overflow-y-auto
+                    scroll-smooth
+                    pb-[335px] 
                 "
             >
                 {

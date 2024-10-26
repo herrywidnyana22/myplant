@@ -1,5 +1,4 @@
-'use client'
-
+'use client';
 
 import mqtt, { MqttClient } from 'mqtt';
 import { MqttStatusProps } from '../types/MqttStatustype';
@@ -8,10 +7,15 @@ import { createContext, useContext, useEffect, useState } from 'react';
 const MqttContext = createContext<{
     client: MqttClient | null
     connectStatus: MqttStatusProps["status"]
-}>({ client: null, connectStatus: 'OFF' })
+    setConnectStatus: (status: MqttStatusProps["status"]) => void
+}>({
+    client: null,
+    connectStatus: 'OFF',
+    setConnectStatus: () => {},
+});
 
 export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [client, setClient] = useState<MqttClient | null>(null)
+    const [client, setClient] = useState<MqttClient | null>(null);
     const [connectStatus, setConnectStatus] = useState<MqttStatusProps["status"]>('OFF')
 
     useEffect(() => {
@@ -20,37 +24,37 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children
             username: process.env.NEXT_PUBLIC_MQTT_USERNAME,
             password: process.env.NEXT_PUBLIC_MQTT_PASSWORD,
             clean: true,
-        })
+        });
 
         mqttClient.on('connect', () => {
             console.log('MQTT Client connected')
-            setConnectStatus('CONNECTED')
-        })
+            setConnectStatus('MQTT CONNECTED')
+        });
 
         mqttClient.on('error', (err) => {
             console.error('MQTT Client error:', err.message)
             setConnectStatus('OFF')
-        })
+        });
 
         mqttClient.on('reconnect', () => {
             console.log('MQTT Client reconnecting...')
-            setConnectStatus('RECONNECTING')
-        })
+            setConnectStatus('CONNECTING')
+        });
 
         setClient(mqttClient)
 
         return () => {
             mqttClient.end()
-        }
-    }, [])
+        };
+    }, []);
 
     return (
-        <MqttContext.Provider value={{ client, connectStatus }}>
+        <MqttContext.Provider value={{ client, connectStatus, setConnectStatus }}>
             {children}
         </MqttContext.Provider>
-    )
-}
+    );
+};
 
 export const useMqtt = () => {
     return useContext(MqttContext)
-}
+};

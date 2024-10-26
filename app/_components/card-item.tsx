@@ -24,9 +24,8 @@ export type CardItemProps={
     mode: "TIMER" | "NO TIMER"
     duration: number
     time: number
+    className?: string
 } & KeranStatusProps
-
-
 
 export const CardItem = ({
     id,
@@ -34,8 +33,8 @@ export const CardItem = ({
     label,
     mode,
     status,
-    time
-
+    time,
+    className
 }: CardItemProps) => {
 
     const isNewDuration = !durationOptionData.some(option => option.duration === duration);
@@ -72,6 +71,7 @@ export const CardItem = ({
         setOnDuration(0)
         setOnStatus("OFF")
         setOnMode(modeValue)
+        setIsDurationNewActive(false)
 
     }
     const controlKeran = (action: typeof status) => {
@@ -122,20 +122,33 @@ export const CardItem = ({
     return ( 
     <>
         <ConfirmMode/>
-        
+        <div 
+            className={cn(`
+                sticky 
+                top-0 
+                flex 
+                items-center 
+                justify-center`,
+                className
+            )}
+        >
             <div
+                style={{
+                    zIndex: id,
+                    top:`calc(0vh + ${id * 72}px)`
+                }}
                 className={cn(`
+                    relative
+                    origin-top
                     w-64
                     flex
                     flex-col
-                    gap-2
                     justify-between
                     p-6
                     rounded-3xl
                     transition-shadow
                     shadow-card-shadow
                     bg-primary-1`, 
-                    onStatus === "RUNNING" && 'shadow-card-shadow-inner scale-95'
                     
                 )}
             >
@@ -189,7 +202,7 @@ export const CardItem = ({
                     </div>
                 </div>
                 {
-                    (onMode === "TIMER") &&
+                    onMode === "TIMER" &&
                     (
                     <div 
                         className="
@@ -242,22 +255,21 @@ export const CardItem = ({
                                     isNew
                                 />
                             )
-
                     }
-                        
-                    
                     </div>
-
                     )
 
                 }
                 <div 
-                    className="
+                    className={cn(`
                         flex 
                         justify-between 
                         items-center 
-                        gap-2
-                    "
+                        rounded-2xl
+                        p-3
+                        gap-2`,
+                        onStatus === "RUNNING" && 'shadow-card-shadow-inner scale-95'
+                    )}
                 >
                     <ControlButton
                         onClick={() => handleControlButton("OFF")}
@@ -309,6 +321,8 @@ export const CardItem = ({
             
             }       
             </div>
+            
+        </div>
     </>
     )
 }

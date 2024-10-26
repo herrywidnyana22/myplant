@@ -9,8 +9,14 @@
   box-sizing: border-box;
 }
 
+::-webkit-scrollbar {
+    display: none; /* Hide scrollbar */
+}
+
 body {
   font-family: Arial, Helvetica, sans-serif;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 @layer utilities {

@@ -1,3 +1,3 @@
 export type MqttStatusProps ={
-    status: "CONNECTED" | "OFF" | "CONNECTING" | "RECONNECTING"
+    status: "DEVICE CONNECTED" | "MQTT CONNECTED" | "DEVICE DISCONNECTED" | "CONNECTING" | "OFF"
 }

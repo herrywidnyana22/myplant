@@ -48,8 +48,6 @@ const CustomDurationPicker = ({ onSelect }: CustomDurationPickerProps) => {
     ) => {
         const selectedItem = getSelectedItem(ref, items)
         setSelected(selectedItem)
-
-        hapticFeedBack()
     }
 
     // Confirm button handler that captures the highlighted values
@@ -57,12 +55,6 @@ const CustomDurationPicker = ({ onSelect }: CustomDurationPickerProps) => {
         const hoursSelected = getSelectedItem(hoursRef, hours)
         const minutesSelected = getSelectedItem(minutesRef, minutes)
         onSelect(hoursSelected * 60 + minutesSelected)
-    }
-
-    const hapticFeedBack = () =>{
-        if(navigator.vibrate){
-            navigator.vibrate(10)
-        }
     }
 
     return (

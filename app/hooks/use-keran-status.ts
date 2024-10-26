@@ -2,34 +2,34 @@ import { useEffect, useState } from 'react';
 import { useMqtt } from '../context/MqttContex';
 import { KeranStatusProps } from '../types/KeranStatusType';
 
-interface RelayStatus {
+export type RelayStatusProps = {
   name: string;
   status: KeranStatusProps["status"];
   duration: number;
   runtime: number;
 }
 
-interface StatusMessage {
+type StatusMessageProps = {
   name: string;
   duration: number;
   status: KeranStatusProps["status"];
 }
 
-interface DurationMessage {
+type DurationMessageProps = {
   name: string;
   duration: number;
 }
 
-interface RuntimeMessage {
+type RuntimeMessageProps = {
   name: string;
   runtime: number;
 }
 
 export const UseKeranStatus = () => {
-    const [combineStatus, setCombineStatus] = useState<RelayStatus[]>([]);
-    const [statusMsg, setStatusMsg] = useState<StatusMessage[]>([]);
-    const [durationMsg, setDurationMsg] = useState<DurationMessage[]>([]);
-    const [runtimeMsg, setRuntimeMsg] = useState<RuntimeMessage[]>([]);
+    const [combineStatus, setCombineStatus] = useState<RelayStatusProps[]>([]);
+    const [statusMsg, setStatusMsg] = useState<StatusMessageProps[]>([]);
+    const [durationMsg, setDurationMsg] = useState<DurationMessageProps[]>([]);
+    const [runtimeMsg, setRuntimeMsg] = useState<RuntimeMessageProps[]>([]);
     
     // Flags to track if data from each topic has been received
     const [statusReceived, setStatusReceived] = useState(false);
@@ -81,7 +81,7 @@ export const UseKeranStatus = () => {
 
                 if (topic === 'myplant/status') {
                     try {
-                        const statusArray: StatusMessage[] = JSON.parse(message.toString())
+                        const statusArray: StatusMessageProps[] = JSON.parse(message.toString())
                         setStatusMsg(statusArray)
                         setStatusReceived(true)
                     } catch (error) {
@@ -89,7 +89,7 @@ export const UseKeranStatus = () => {
                     }
                 } else if (topic === 'myplant/duration') {
                     try {
-                        const durationArray: DurationMessage[] = JSON.parse(message.toString())
+                        const durationArray: DurationMessageProps[] = JSON.parse(message.toString())
                         setDurationMsg(durationArray)
                         setDurationReceived(true)
                     } catch (error) {
@@ -97,7 +97,7 @@ export const UseKeranStatus = () => {
                     }
                 } else if (topic === 'myplant/runtime') {
                     try {
-                        const runtimeArray: RuntimeMessage[] = JSON.parse(message.toString())
+                        const runtimeArray: RuntimeMessageProps[] = JSON.parse(message.toString())
                         setRuntimeMsg(runtimeArray)
                         setRuntimeReceived(true)
                     } catch (error) {
