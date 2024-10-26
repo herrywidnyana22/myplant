@@ -8,12 +8,15 @@ import { KeranStatusProps } from "../types/KeranStatusType";
 import { ControlButton } from "./control-button";
 import { useEffect, useRef, useState } from "react";
 
-import TimeCountdown from "./time-countdown";
 import { usePublish } from "../hooks/use-publish";
 import { DurationButton } from "./duration-button";
 import { toast } from "sonner";
 import { useConfirm } from "../hooks/use-confirm";
+import { durationOptionData } from "../data/duration-option";
+import { DurationButtonNew } from "./duration-button-new";
+
 import CustomDurationPicker from "./custom-duration-picker";
+import TimeCountdown from "./time-countdown";
 
 export type CardItemProps={
     id:number
@@ -22,6 +25,8 @@ export type CardItemProps={
     duration: number
     time: number
 } & KeranStatusProps
+
+
 
 export const CardItem = ({
     id,
@@ -32,13 +37,18 @@ export const CardItem = ({
     time
 
 }: CardItemProps) => {
+
+    const isNewDuration = !durationOptionData.some(option => option.duration === duration);
+    
     const { publishMessage } = usePublish()
     const [durationActive, setDurationActive] = useState("")
     const [onDuration, setOnDuration] = useState(duration)
     const [onMode, setOnMode] = useState(mode)
     const [onStatus, setOnStatus] = useState(status)
 
-    const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+    const [newDuration, setNewDuration]= useState(isNewDuration ? duration : 0)
+    const [isDurationNewActive, setIsDurationNewActive] = useState(false)
+
 
     const [ConfirmMode, confirm] = useConfirm(
         "Yakin ingin mengubah ke mode TIMER?",
@@ -47,6 +57,7 @@ export const CardItem = ({
 
     // Ref to store the previous onMode
     const prevModeRef = useRef(mode)
+
 
     const onSwitchChange = async() =>{
         const modeValue:CardItemProps['mode'] = onMode === "TIMER" ? "NO TIMER" : "TIMER"
@@ -87,9 +98,9 @@ export const CardItem = ({
         controlKeran(action)
     }
 
-    const handleDurationSelect = (duration: number) => {
-        setSelectedDuration(duration)
-        console.log("Selected Duration in Minutes:", duration)
+    const handleNewDurationSelect = (newDurasi: number) => {
+        setNewDuration(newDurasi)
+        setIsDurationNewActive(false)
     }
 
     // Update local state whenever props change
@@ -192,60 +203,49 @@ export const CardItem = ({
                             rounded-xl
                         "
                     >
-                        <DurationButton
-                            id={`${id}90menit`}
-                            status={status}
-                            initDuration={duration}
-                            duration={90}
-                            durationActive={durationActive} 
-                            setDurationActive={setDurationActive}
-                            setOnDuration={setOnDuration}
-                        />
-                        <DurationButton
-                            id={`${id}60menit`}
-                            status={status}
-                            initDuration={duration}
-                            duration={60}
-                            durationActive={durationActive} 
-                            setDurationActive={setDurationActive}
-                            setOnDuration={setOnDuration}
-                        />
-                        <DurationButton
-                            id={`${id}45menit`}
-                            status={status}
-                            initDuration={duration}
-                            duration={45}
-                            durationActive={durationActive} 
-                            setOnDuration={setOnDuration}
-                            setDurationActive={setDurationActive}
-                        />
-                        <DurationButton
-                            id={`${id}30menit`}
-                            status={status}
-                            initDuration={duration}
-                            duration={30}
-                            durationActive={durationActive} 
-                            setOnDuration={setOnDuration}
-                            setDurationActive={setDurationActive}
-                        />
-                        <DurationButton
-                            id={`${id}5menit`}
-                            status={status}
-                            initDuration={duration}
-                            duration={5}
-                            durationActive={durationActive} 
-                            setOnDuration={setOnDuration}
-                            setDurationActive={setDurationActive}
-                        />
-                        <DurationButton
-                            id={`${id}3menit`}
-                            status={status}
-                            initDuration={duration}
-                            duration={3}
-                            durationActive={durationActive} 
-                            setDurationActive={setDurationActive}
-                            setOnDuration={setOnDuration}
-                        />
+                    {
+                        durationOptionData.map((item, i) => (
+                            <DurationButton
+                                key={i}
+                                id={`${id}-${item.duration}-${item.id}`}
+                                status={status}
+                                initDuration={duration}
+                                duration={item.duration}
+                                durationActive={durationActive} 
+                                setDurationActive={setDurationActive}
+                                setOnDuration={setOnDuration}
+                            />
+                        ))
+                    }
+                    {
+                        newDuration === 0 
+                        ? 
+                            (
+                                <DurationButtonNew
+                                    isDurationNewActive={isDurationNewActive}
+                                    setIsDurationNewActive={setIsDurationNewActive}
+                                />
+
+                            )
+                        : 
+                            (
+
+                                <DurationButton
+                                    id={`${id}-NEW-${newDuration}`}
+                                    status={status}
+                                    initDuration={duration}
+                                    duration={newDuration}
+                                    durationActive={durationActive} 
+                                    setDurationActive={setDurationActive}
+                                    setOnDuration={setOnDuration}
+                                    setNewDuration={setNewDuration}
+                                    isNew
+                                />
+                            )
+
+                    }
+                        
+                    
                     </div>
 
                     )
@@ -290,13 +290,24 @@ export const CardItem = ({
                         }
                     />
                 </div>
+            {
 
-                <div>
-                    <CustomDurationPicker onSelect={handleDurationSelect} />
-                        {selectedDuration !== null && (
-                            <p className="mt-4 text-lg">Selected Duration: {selectedDuration} minutes</p>
-                        )}
-                </div>
+                isDurationNewActive && 
+                (
+                    <div 
+                        className="
+                            py-2
+                            border 
+                            border-spacing-1
+                            rounded-xl
+                        "
+                    >
+                        <CustomDurationPicker onSelect={handleNewDurationSelect} />
+                    </div>
+
+                )
+            
+            }       
             </div>
     </>
     )
