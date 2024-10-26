@@ -1,55 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface CustomDurationPickerProps {
     onSelect: (duration: number) => void;
 }
 
 const CustomDurationPicker: React.FC<CustomDurationPickerProps> = ({ onSelect }) => {
-    const [selectedHours, setSelectedHours] = useState(0);
-    const [selectedMinutes, setSelectedMinutes] = useState(0);
+    const [selectedHours, setSelectedHours] = useState(0); // Start at 0 for hours
+    const [selectedMinutes, setSelectedMinutes] = useState(0); // Start at 0 for minutes
 
-    const hours = Array.from({ length: 24 }, (_, i) => i); // 0-23 hours
-    const minutes = Array.from({ length: 60 }, (_, i) => i); // 0-59 minutes
+    const hoursRef = useRef<HTMLDivElement>(null);
+    const minutesRef = useRef<HTMLDivElement>(null);
+    const itemHeight = 36; // Adjusted item height in pixels
+    const visibleItems = 5; // Number of visible items in the scrolling list
+    const centerIndex = Math.floor(visibleItems / 2); // Center position for highlight
 
+    const hours = Array.from({ length: 24 }, (_, i) => i);
+    const minutes = Array.from({ length: 59 }, (_, i) => i+1);
+
+    // Set scroll position to highlight "0" on initial render
+    useEffect(() => {
+        if (hoursRef.current) {
+            hoursRef.current.scrollTop = 0; // Adjust scrollTop to ensure "0" is highlighted
+            setSelectedHours(0); // Set initial selection to 0 for hours
+        }
+        if (minutesRef.current) {
+            minutesRef.current.scrollTop = 0; // Adjust scrollTop to ensure "0" is highlighted
+            setSelectedMinutes(0); // Set initial selection to 0 for minutes
+        }
+    }, []);
+
+    // Get selected item based on scroll position
+    const getSelectedItem = (ref: React.RefObject<HTMLDivElement>, items: number[]) => {
+        if (ref.current) {
+            const currentScrollTop = ref.current.scrollTop;
+            const closestIndex = Math.round(currentScrollTop / itemHeight) - 1;
+            return items[closestIndex] !== undefined ? items[closestIndex] : 0;
+        }
+        return 0;
+    };
+
+    // Scroll handler to update selected state
+    const handleScroll = (
+        ref: React.RefObject<HTMLDivElement>,
+        items: number[],
+        setSelected: (value: number) => void
+    ) => {
+        const selectedItem = getSelectedItem(ref, items);
+        setSelected(selectedItem);
+    };
+
+    // Confirm button handler that captures the highlighted values
     const handleConfirm = () => {
-        const duration = selectedHours * 60 + selectedMinutes;
-        onSelect(duration);
+        const hoursSelected = getSelectedItem(hoursRef, hours);
+        const minutesSelected = getSelectedItem(minutesRef, minutes);
+        onSelect(hoursSelected * 60 + minutesSelected);
     };
 
     return (
-        <div className="flex flex-col items-center space-y-4 p-4 rounded-lg bg-gray-100 shadow-lg w-64">
-            <h2 className="text-lg font-semibold mb-2">Select Duration</h2>
-            <div className="flex justify-center items-center space-x-4">
+        <div>
+            <div className="relative flex items-center space-x-3">
+                <div className="absolute top-1/2 transform -translate-y-1/2 h-8 w-full pointer-events-none flex justify-center z-20">
+                    <span className="flex justify-between items-center w-full h-8 bg-white opacity-50 px-3 text-xs rounded-md">
+                        <p className='pl-14'>hour</p>
+                        <p>minute</p>
+                    </span>
+                </div>
+
                 {/* Hours Wheel */}
-                <div className="relative w-20 h-40 overflow-y-scroll scrollbar-hide">
+                <div
+                    ref={hoursRef}
+                    className="relative w-20 h-40 overflow-y-scroll scrollbar-hide snap-y snap-mandatory"
+                    onScroll={() => handleScroll(hoursRef, hours, setSelectedHours)}
+                >
                     <div className="flex flex-col items-center gap-2">
+                        {Array.from({ length: centerIndex }).map((_, idx) => (
+                            <div key={idx} style={{ height: `${itemHeight}px` }}></div>
+                        ))}
                         {hours.map((hour) => (
-                            <button
+                            <div
                                 key={hour}
-                                onClick={() => setSelectedHours(hour)}
-                                className={`text-lg font-medium ${
-                                    hour === selectedHours ? 'text-blue-600' : 'text-gray-400'
+                                className={`text-lg font-medium snap-center ${
+                                    hour === selectedHours ? 'text-font-primary font-semibold' : 'text-gray-400'
                                 }`}
                             >
-                                {hour} h
-                            </button>
+                                {hour}
+                            </div>
+                        ))}
+                        {Array.from({ length: centerIndex }).map((_, idx) => (
+                            <div key={idx} style={{ height: `${itemHeight}px` }}></div>
                         ))}
                     </div>
                 </div>
 
                 {/* Minutes Wheel */}
-                <div className="relative w-20 h-40 overflow-y-scroll scrollbar-hide">
+                <div
+                    ref={minutesRef}
+                    className="relative w-20 h-40 overflow-y-scroll scrollbar-hide snap-y snap-mandatory"
+                    onScroll={() => handleScroll(minutesRef, minutes, setSelectedMinutes)}
+                >
                     <div className="flex flex-col items-center gap-2">
+                        {Array.from({ length: centerIndex }).map((_, idx) => (
+                            <div key={idx} style={{ height: `${itemHeight}px` }}></div>
+                        ))}
                         {minutes.map((minute) => (
-                            <button
+                            <div
                                 key={minute}
-                                onClick={() => setSelectedMinutes(minute)}
-                                className={`text-lg font-medium ${
+                                className={`text-lg font-medium snap-center ${
                                     minute === selectedMinutes ? 'text-blue-600' : 'text-gray-400'
                                 }`}
                             >
-                                {minute} m
-                            </button>
+                                {minute}
+                            </div>
+                        ))}
+                        {Array.from({ length: centerIndex }).map((_, idx) => (
+                            <div key={idx} style={{ height: `${itemHeight}px` }}></div>
                         ))}
                     </div>
                 </div>
