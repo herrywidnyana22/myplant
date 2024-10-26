@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { KeranStatusProps } from '../types/KeranStatusType';
 import { cn } from '@/lib/utils';
-import { Hint } from './hint';
 import { formatTime } from '../utils/format-time';
 
 interface TimeCountProps {
