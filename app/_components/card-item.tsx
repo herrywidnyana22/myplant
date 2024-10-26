@@ -13,6 +13,7 @@ import { usePublish } from "../hooks/use-publish";
 import { DurationButton } from "./duration-button";
 import { toast } from "sonner";
 import { useConfirm } from "../hooks/use-confirm";
+import CustomDurationPicker from "./custom-duration-picker";
 
 export type CardItemProps={
     id:number
@@ -37,22 +38,15 @@ export const CardItem = ({
     const [onMode, setOnMode] = useState(mode)
     const [onStatus, setOnStatus] = useState(status)
 
+    const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+
     const [ConfirmMode, confirm] = useConfirm(
         "Yakin ingin mengubah ke mode TIMER?",
         "Ini akan mematikan keran terlebih dahulu"
     )
 
     // Ref to store the previous onMode
-    const prevModeRef = useRef(mode);
-
-    useEffect(() => {
-        if (prevModeRef.current === "TIMER" && onStatus === "OFF") {
-            setOnMode("TIMER")
-            setDurationActive("")
-        }
-        
-        prevModeRef.current = onMode
-    }, [onStatus])
+    const prevModeRef = useRef(mode)
 
     const onSwitchChange = async() =>{
         const modeValue:CardItemProps['mode'] = onMode === "TIMER" ? "NO TIMER" : "TIMER"
@@ -93,12 +87,26 @@ export const CardItem = ({
         controlKeran(action)
     }
 
+    const handleDurationSelect = (duration: number) => {
+        setSelectedDuration(duration)
+        console.log("Selected Duration in Minutes:", duration)
+    }
+
     // Update local state whenever props change
     useEffect(() => {
         setOnMode(mode)
         setOnDuration(duration)
         setOnStatus(status)
-    }, [mode, status, duration]);
+    }, [mode, status, duration])
+
+    useEffect(() => {
+        if (prevModeRef.current === "TIMER" && onStatus === "OFF") {
+            setOnMode("TIMER")
+            setDurationActive("")
+        }
+        
+        prevModeRef.current = onMode
+    }, [onStatus])
 
     return ( 
     <>
@@ -281,6 +289,13 @@ export const CardItem = ({
                             : 'shadow-shadow-button'
                         }
                     />
+                </div>
+
+                <div>
+                    <CustomDurationPicker onSelect={handleDurationSelect} />
+                        {selectedDuration !== null && (
+                            <p className="mt-4 text-lg">Selected Duration: {selectedDuration} minutes</p>
+                        )}
                 </div>
             </div>
     </>
