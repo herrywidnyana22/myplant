@@ -45,19 +45,27 @@ const CustomDurationPicker: React.FC<CustomDurationPickerProps> = ({ onSelect })
         items: number[],
         setSelected: (value: number) => void
     ) => {
-        const selectedItem = getSelectedItem(ref, items);
-        setSelected(selectedItem);
-    };
+        const selectedItem = getSelectedItem(ref, items)
+        setSelected(selectedItem)
+
+        hapticFeedBack()
+    }
 
     // Confirm button handler that captures the highlighted values
     const handleConfirm = () => {
         const hoursSelected = getSelectedItem(hoursRef, hours);
         const minutesSelected = getSelectedItem(minutesRef, minutes);
         onSelect(hoursSelected * 60 + minutesSelected);
-    };
+    }
+
+    const hapticFeedBack = () =>{
+        if(navigator.vibrate){
+            navigator.vibrate(10);
+        }
+    }
 
     return (
-        <div>
+        <div className='text-center'>
             <div className="relative flex items-center space-x-3">
                 <div className="absolute top-1/2 transform -translate-y-1/2 h-8 w-full pointer-events-none flex justify-center z-20">
                     <span className="flex justify-between items-center w-full h-8 bg-white opacity-50 px-3 text-xs rounded-md">
