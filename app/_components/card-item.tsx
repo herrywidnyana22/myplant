@@ -78,8 +78,8 @@ export const CardItem = ({
         
         const topic = 'myplant/control'
        
-        const msgSuccess =`${label} ${action} berhasil...`
-        const msgError =`${label} ${action} gagal...`
+        const msgSuccess =`${label} berhasil ${action}...`
+        const msgError =`${label} gagal ${action}...`
 
         const msg = JSON.stringify({
                         keranID: id,
@@ -93,6 +93,10 @@ export const CardItem = ({
     const handleControlButton = (action: typeof status) =>{
         if(action === "RUNNING" && onDuration === 0 && onMode === "TIMER"){
             return toast.error("Tentukan durasi terlebih dahulu")            
+        }
+
+        if(action === "RUNNING"){
+            setIsDurationNewActive(false)
         }
 
         controlKeran(action)
@@ -237,6 +241,7 @@ export const CardItem = ({
                                 <DurationButtonNew
                                     isDurationNewActive={isDurationNewActive}
                                     setIsDurationNewActive={setIsDurationNewActive}
+                                    className= {onStatus === "RUNNING" ? "opacity-50 pointer-events-none" : ""}
                                 />
 
                             )
@@ -265,10 +270,10 @@ export const CardItem = ({
                         flex 
                         justify-between 
                         items-center 
-                        rounded-2xl
+                        gap-2
                         p-3
-                        gap-2`,
-                        onStatus === "RUNNING" && 'shadow-card-shadow-inner scale-95'
+                        rounded-2xl`,
+                        onStatus === "RUNNING" && 'shadow-card-shadow-inner mt-2'
                     )}
                 >
                     <ControlButton

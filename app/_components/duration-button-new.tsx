@@ -1,16 +1,24 @@
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
+import { CardItemProps } from "./card-item";
 
 type NewDurationProps={
     isDurationNewActive: boolean, 
     setIsDurationNewActive: (isDurationNewActive: boolean) => void
+    className?: string
 }
 
-export const DurationButtonNew = ({isDurationNewActive, setIsDurationNewActive}: NewDurationProps) => {
+export const DurationButtonNew = ({
+    isDurationNewActive, 
+    setIsDurationNewActive,
+    className
+}: NewDurationProps) => {
 
     const handleButtonClick = () =>{
         setIsDurationNewActive(!isDurationNewActive)
     }
+
+    console.log({status})
 
     return ( 
          <div
@@ -29,7 +37,8 @@ export const DurationButtonNew = ({isDurationNewActive, setIsDurationNewActive}:
                 bg-white`,
                 isDurationNewActive 
                 ? 'shadow-shadow-button-active'
-                : 'shadow-shadow-button'
+                : 'shadow-shadow-button',
+                className
             )}
         >
             <div 
