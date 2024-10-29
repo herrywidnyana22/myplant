@@ -24,7 +24,7 @@ export type CardItemProps={
     mode: "TIMER" | "NO TIMER"
     duration: number
     time: number
-    className?: string
+    collapse?: boolean
 } & KeranStatusProps
 
 export const CardItem = ({
@@ -34,7 +34,7 @@ export const CardItem = ({
     mode,
     status,
     time,
-    className
+    collapse,
 }: CardItemProps) => {
 
     const isNewDuration = !durationOptionData.some(option => option.duration === duration);
@@ -126,24 +126,19 @@ export const CardItem = ({
     return ( 
     <>
         <ConfirmMode/>
-        <div 
-            className={cn(`
-                sticky 
-                top-0 
+        <div
+            className="
                 flex 
-                items-center 
-                justify-center`,
-                className
-            )}
+                justify-center
+                gap-2
+            "
         >
             <div
                 style={{
                     zIndex: id,
-                    top:`calc(0vh + ${id * 72}px)`
+                    top: collapse ? `calc(0.3vh + ${id * 75}px)` : 0
                 }}
                 className={cn(`
-                    relative
-                    origin-top
                     w-64
                     flex
                     flex-col
@@ -153,7 +148,9 @@ export const CardItem = ({
                     transition-shadow
                     shadow-card-shadow
                     bg-primary-1`, 
-                    
+                    collapse
+                    ? 'absolute'
+                    : 'relative'
                 )}
             >
                 <div
@@ -326,7 +323,6 @@ export const CardItem = ({
             
             }       
             </div>
-            
         </div>
     </>
     )

@@ -1,16 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMqtt } from "../context/MqttContex"
 import { ConnectionStatus } from './connection-status';
 import { CardItem } from './card-item';
 import { formatCapitalize } from '../utils/format-capitalize';
 import { UseKeranStatus } from '../hooks/use-keran-status';
+import { Layers, SquareStack } from 'lucide-react';
+import { Hint } from './hint';
 
 export const Card = () => {
     const data = UseKeranStatus()
-    const [keranData, setKeranData] = useState(data)
     const { setConnectStatus } = useMqtt()
+    
+    const [keranData, setKeranData] = useState(data)
+    const [isCollapse, setIsCollapse] = useState(true)
 
     useEffect(() => {
         setKeranData(data);
@@ -54,16 +58,50 @@ export const Card = () => {
                 </h1>
                 <ConnectionStatus/>
             </div>
+            {
+                !isCollapse 
+                ? (
+
+                    <Hint label='Collapse'>
+                        <div 
+                            onClick={() => setIsCollapse(true)}
+                            className='
+                                absolute 
+                                top-12 
+                                right-5 
+                                text-slate-500
+                                cursor-pointer'
+                            >
+                            <Layers className='size-4'/>
+                        </div>
+                    </Hint>
+                ) : (
+
+                    <Hint label='Expand'>
+                        <div 
+                            onClick={() => setIsCollapse(false)}
+                            className='
+                                absolute 
+                                top-12 
+                                right-5 
+                                text-slate-500
+                                cursor-pointer'
+                            >
+                            <SquareStack className='size-4'/>
+                        </div>
+                    </Hint>
+                )
+            }
             <div
                 className=" 
                     relative
-                    snap-y
-                    snap-mandatory 
-                    max-h-[520px]
-                    py-2
+                    flex
+                    flex-col
+                    gap-5
+                    h-[560px]
+                    p-2
                     overflow-y-auto
                     scroll-smooth
-                    pb-[335px] 
                 "
             >
                 {
@@ -76,6 +114,7 @@ export const Card = () => {
                             duration={item.duration}
                             mode={item.duration > 0 ? "TIMER" : "NO TIMER"}
                             time={item.runtime}
+                            collapse={isCollapse}
                         />
                     ))
                 }

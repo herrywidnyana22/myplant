@@ -1,6 +1,5 @@
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
-import { CardItemProps } from "./card-item";
 
 type NewDurationProps={
     isDurationNewActive: boolean, 
