@@ -50,8 +50,8 @@ export const CardItem = ({
 
 
     const [ConfirmMode, confirm] = useConfirm(
-        "Yakin ingin mengubah ke mode TIMER?",
-        "Ini akan mematikan keran terlebih dahulu"
+        `Yakin ingin mengubah ke mode ${onMode === "NO TIMER" ? "AUTO TIMER" : "MANUAL TIMER"}?`,
+        "Ini akan mematikan keran dan mereset waktu terlebih dahulu"
     )
 
     // Ref to store the previous onMode

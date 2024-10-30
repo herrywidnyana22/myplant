@@ -56,6 +56,7 @@ export const useConfirm = (
                     <CustomButton
                         onClick={onConfirm}
                         disabled={false}
+                        className="bg-font-primary"
                     >
                         Confirm
                     </CustomButton>
