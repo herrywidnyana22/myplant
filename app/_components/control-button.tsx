@@ -12,7 +12,6 @@ type ControlButtonProps = {
 export const ControlButton = ({
     onClick,
     className,
-    status,
     iconClassName,
     icon: Icon
 }: ControlButtonProps) => {
@@ -26,7 +25,6 @@ export const ControlButton = ({
                 text-slate-500
                 bg-white
                 shadow-shadow-button-active`,
-                (status !== "OFF") && 'shadow-shadow-button',
                 className
             )}
         >

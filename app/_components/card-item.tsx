@@ -280,7 +280,7 @@ export const CardItem = ({
                         iconClassName={"size-5 bg-rose-500 text-rose-500 rounded-sm"}
                         className={(onStatus === "RUNNING" ||  onStatus === "PAUSED") 
                             ? 'shadow-shadow-button' 
-                            : undefined
+                            : 'opacity-50 pointer-events-none'
                         }
                     />
                     <ControlButton 
@@ -289,7 +289,7 @@ export const CardItem = ({
                         icon={Play}
                         iconClassName={"size-8 text-font-primary"}
                         className={onStatus === "RUNNING" 
-                            ? 'shadow-shadow-button-active'
+                            ? 'shadow-shadow-button-active opacity-50 pointer-events-none'
                             : 'shadow-shadow-button'
                         }
                     />
@@ -299,7 +299,7 @@ export const CardItem = ({
                         icon={Pause}
                         iconClassName={"size-5"}
                         className={onStatus === "PAUSED"  || onStatus !== "RUNNING"
-                            ? 'shadow-shadow-button-active'
+                            ? 'shadow-shadow-button-active opacity-50 pointer-events-none'
                             : 'shadow-shadow-button'
                         }
                     />
