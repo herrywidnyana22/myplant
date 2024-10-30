@@ -135,22 +135,23 @@ export const CardItem = ({
         >
             <div
                 style={{
-                    zIndex: id,
-                    top: collapse ? `calc(0.3vh + ${id * 75}px)` : 0
+                    transform: !collapse ? `translateY(${id * -65}%)` : `translateY(0)`
                 }}
                 className={cn(`
+                    relative
                     w-64
                     flex
                     flex-col
                     justify-between
                     p-6
                     rounded-3xl
-                    transition-shadow
                     shadow-card-shadow
+                    transition-all  
+                    duration-500 
                     bg-primary-1`, 
-                    collapse
-                    ? 'absolute'
-                    : 'relative'
+                    // collapse
+                    // ? 'absolute '
+                    // : 'relative '
                 )}
             >
                 <div
