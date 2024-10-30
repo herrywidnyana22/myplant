@@ -192,7 +192,6 @@ export const CardItem = ({
                     <div 
                         className="
                             text-muted-foreground 
-                            text-xl 
                             font-bold
                         "
                     >

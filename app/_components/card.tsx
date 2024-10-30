@@ -33,8 +33,9 @@ export const Card = () => {
             className="
                 relative
                 w-full
+                max-w-md
                 rounded-3xl
-                m-52
+                m-auto
                 p-5
                 shadow-card-shadow
             "

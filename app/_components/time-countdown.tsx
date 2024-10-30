@@ -46,14 +46,14 @@ const TimeCountdown = ({
     
 
     return (
-        <span
+        <p
             className={cn('text-slate-500',
                 status === "RUNNING" && 'text-emerald-500',
                 status === "PAUSED" && 'text-orange-500',
             )}
         >
             {formatTime(runtime)}
-        </span>
+        </p>
     )
 }
 
