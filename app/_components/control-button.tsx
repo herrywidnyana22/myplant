@@ -22,7 +22,6 @@ export const ControlButton = ({
                 p-3
                 rounded-full
                 transition-shadow
-                text-slate-500
                 bg-white
                 shadow-shadow-button-active`,
                 className

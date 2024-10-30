@@ -287,7 +287,7 @@ export const CardItem = ({
                         onClick={() => handleControlButton("RUNNING")}
                         status={onStatus}
                         icon={Play}
-                        iconClassName={"size-8 text-font-primary"}
+                        iconClassName={"size-8 text-green-500"}
                         className={onStatus === "RUNNING" 
                             ? 'shadow-shadow-button-active opacity-50 pointer-events-none'
                             : 'shadow-shadow-button'
@@ -297,7 +297,7 @@ export const CardItem = ({
                         onClick={() => handleControlButton("PAUSED")}
                         status={onStatus}
                         icon={Pause}
-                        iconClassName={"size-5"}
+                        iconClassName={"size-5 text-orange-500"}
                         className={onStatus === "PAUSED"  || onStatus !== "RUNNING"
                             ? 'shadow-shadow-button-active opacity-50 pointer-events-none'
                             : 'shadow-shadow-button'

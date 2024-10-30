@@ -8,10 +8,11 @@ import { formatCapitalize } from '../utils/format-capitalize';
 import { UseKeranStatus } from '../hooks/use-keran-status';
 import { Layers, SquareStack } from 'lucide-react';
 import { Hint } from './hint';
+import { Switch } from '@/components/ui/switch';
 
 export const Card = () => {
     const data = UseKeranStatus()
-    const { setConnectStatus } = useMqtt()
+    const { connectStatus,setConnectStatus } = useMqtt()
     
     const [keranData, setKeranData] = useState(data)
     const [isCollapse, setIsCollapse] = useState(true)
@@ -40,91 +41,112 @@ export const Card = () => {
                 shadow-card-shadow
             "
         >
-            <div
+            <div 
                 className="
                     flex
                     justify-between
+                    items-center
+                    mb-8
                 "
             >
-
-                <h1 
+                <div
                     className="
-                        text-xl 
-                        font-semibold 
-                        mb-10
-                        text-font-primary
+                        flex
+                        items-center
+                        gap-4
                     "
                 >
-                    Device 1
-                </h1>
-                <ConnectionStatus/>
+                    <ConnectionStatus/>
+                    <p 
+                        className="
+                            text-xl 
+                            font-semibold 
+                            text-font-primary
+                        "
+                    >
+                        Noid 1
+                    </p>
+                    
+                </div>
+                <div
+                    className="
+                        flex 
+                        items-center
+                        gap-4
+                    "
+                >
+                    
+                {
+                    keranData.length > 0 &&
+                    <div 
+                        className='
+                            text-slate-500
+                            cursor-pointer 
+                        '
+                    >
+                    {
+                        !isCollapse 
+                        ? (
+
+                            <Hint label='Collapse'>
+                                <div onClick={() => setIsCollapse(true)} >
+                                    <Layers className='size-4'/>
+                                </div>
+                            </Hint>
+                        ) : (
+
+                            <Hint label='Expand'>
+                                <div onClick={() => setIsCollapse(false)}>
+                                    <SquareStack className='size-4'/>
+                                </div>
+                            </Hint>
+                        )
+                    }
+                    </div>
+                }
+                {
+                    connectStatus === "DEVICE CONNECTED" &&
+                    <Switch 
+                        id="mode"
+                        // checked={onMode==="TIMER"}
+                        // onCheckedChange={onSwitchChange}
+                    />
+                }
+                </div>
+
             </div>
             {
-                keranData.length > 0 &&
-                <>
-                {
-                    !isCollapse 
-                    ? (
-
-                        <Hint label='Collapse'>
-                            <div 
-                                onClick={() => setIsCollapse(true)}
-                                className='
-                                    absolute 
-                                    top-12 
-                                    right-5 
-                                    text-slate-500
-                                    cursor-pointer'
-                                >
-                                <Layers className='size-4'/>
-                            </div>
-                        </Hint>
-                    ) : (
-
-                        <Hint label='Expand'>
-                            <div 
-                                onClick={() => setIsCollapse(false)}
-                                className='
-                                    absolute 
-                                    top-12 
-                                    right-5 
-                                    text-slate-500
-                                    cursor-pointer'
-                                >
-                                <SquareStack className='size-4'/>
-                            </div>
-                        </Hint>
-                    )
-                }
-                </>
+                connectStatus === "DEVICE CONNECTED" 
+                ? (
+                    <div
+                        className=" 
+                            h-[560px]
+                            relative
+                            flex
+                            flex-col
+                            gap-5
+                            p-2
+                            overflow-y-auto
+                            scroll-smooth
+                        "
+                    >
+                        {
+                            keranData.map((item, i) =>(
+                                <CardItem
+                                    key={i}
+                                    id={i}
+                                    label={formatCapitalize(item.name)}
+                                    status={item.status}
+                                    duration={item.duration}
+                                    mode={item.duration > 0 ? "TIMER" : "NO TIMER"}
+                                    time={item.runtime}
+                                    collapse={isCollapse}
+                                />
+                            ))
+                        }
+                    </div>
+                ) : <p className='text-center text-slate-400 italic'>Device disconnected</p>
             }
-            <div
-                className=" 
-                    h-[560px]
-                    relative
-                    flex
-                    flex-col
-                    gap-5
-                    p-2
-                    overflow-y-auto
-                    scroll-smooth
-                "
-            >
-                {
-                    keranData.map((item, i) =>(
-                        <CardItem
-                            key={i}
-                            id={i}
-                            label={formatCapitalize(item.name)}
-                            status={item.status}
-                            duration={item.duration}
-                            mode={item.duration > 0 ? "TIMER" : "NO TIMER"}
-                            time={item.runtime}
-                            collapse={isCollapse}
-                        />
-                    ))
-                }
-            </div>
         </div>
     );
 }
