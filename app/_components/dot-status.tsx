@@ -15,8 +15,8 @@ export const DotStatus = ({ connectStatus }: DotStatusProps) => {
         className={cn(
           `w-4 h-4 rounded-full`,
           (connectStatus === "OFF" || connectStatus === "DEVICE DISCONNECTED") && 'bg-rose-500',
-          (connectStatus === "DEVICE CONNECTED" || connectStatus === "MQTT CONNECTED" || connectStatus === "RUNNING") && 'bg-green-500',
-          (connectStatus === "CONNECTING") && 'bg-blue-500',
+          (connectStatus === "DEVICE CONNECTED" || connectStatus === "RUNNING") && 'bg-green-500',
+          // (connectStatus === "CONNECTING" || connectStatus === "MQTT CONNECTED") && 'bg-blue-500',
           (connectStatus === "PAUSED") && 'bg-orange-500',
         )}
       />

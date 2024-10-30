@@ -19,7 +19,7 @@ export const Card = () => {
     useEffect(() => {
         setKeranData(data);
         
-        if (!data || data.length === 0) {
+        if (!data || data.length === 0 ){
             setConnectStatus("DEVICE DISCONNECTED")
         } else {
             setConnectStatus("DEVICE CONNECTED")
@@ -59,46 +59,51 @@ export const Card = () => {
                 <ConnectionStatus/>
             </div>
             {
-                !isCollapse 
-                ? (
+                keranData.length > 0 &&
+                <>
+                {
+                    !isCollapse 
+                    ? (
 
-                    <Hint label='Collapse'>
-                        <div 
-                            onClick={() => setIsCollapse(true)}
-                            className='
-                                absolute 
-                                top-12 
-                                right-5 
-                                text-slate-500
-                                cursor-pointer'
-                            >
-                            <Layers className='size-4'/>
-                        </div>
-                    </Hint>
-                ) : (
+                        <Hint label='Collapse'>
+                            <div 
+                                onClick={() => setIsCollapse(true)}
+                                className='
+                                    absolute 
+                                    top-12 
+                                    right-5 
+                                    text-slate-500
+                                    cursor-pointer'
+                                >
+                                <Layers className='size-4'/>
+                            </div>
+                        </Hint>
+                    ) : (
 
-                    <Hint label='Expand'>
-                        <div 
-                            onClick={() => setIsCollapse(false)}
-                            className='
-                                absolute 
-                                top-12 
-                                right-5 
-                                text-slate-500
-                                cursor-pointer'
-                            >
-                            <SquareStack className='size-4'/>
-                        </div>
-                    </Hint>
-                )
+                        <Hint label='Expand'>
+                            <div 
+                                onClick={() => setIsCollapse(false)}
+                                className='
+                                    absolute 
+                                    top-12 
+                                    right-5 
+                                    text-slate-500
+                                    cursor-pointer'
+                                >
+                                <SquareStack className='size-4'/>
+                            </div>
+                        </Hint>
+                    )
+                }
+                </>
             }
             <div
                 className=" 
+                    h-[560px]
                     relative
                     flex
                     flex-col
                     gap-5
-                    h-[560px]
                     p-2
                     overflow-y-auto
                     scroll-smooth

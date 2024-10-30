@@ -28,33 +28,31 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         mqttClient.on('connect', () => {
             console.log('MQTT Client connected')
-            setConnectStatus('MQTT CONNECTED')
-        });
+        })
 
         mqttClient.on('error', (err) => {
             console.error('MQTT Client error:', err.message)
             setConnectStatus('OFF')
-        });
+        })
 
         mqttClient.on('reconnect', () => {
             console.log('MQTT Client reconnecting...')
-            setConnectStatus('CONNECTING')
-        });
+        })
 
         setClient(mqttClient)
 
         return () => {
             mqttClient.end()
-        };
-    }, []);
+        }
+    }, [])
 
     return (
         <MqttContext.Provider value={{ client, connectStatus, setConnectStatus }}>
             {children}
         </MqttContext.Provider>
-    );
-};
+    )
+}
 
 export const useMqtt = () => {
     return useContext(MqttContext)
-};
+}
