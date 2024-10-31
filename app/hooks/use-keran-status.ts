@@ -3,26 +3,27 @@ import { useMqtt } from '../context/MqttContex';
 import { KeranStatusProps } from '../types/KeranStatusType';
 
 export type RelayStatusProps = {
-  name: string;
-  status: KeranStatusProps["status"];
-  duration: number;
-  runtime: number;
+    id:string
+    name: string
+    status: KeranStatusProps["status"]
+    duration: number
+    runtime: number
 }
 
 type StatusMessageProps = {
-  name: string;
-  duration: number;
-  status: KeranStatusProps["status"];
+    name: string
+    duration: number
+    status: KeranStatusProps["status"]
 }
 
 type DurationMessageProps = {
-  name: string;
-  duration: number;
+    name: string
+    duration: number
 }
 
 type RuntimeMessageProps = {
-  name: string;
-  runtime: number;
+    name: string
+    runtime: number
 }
 
 export const UseKeranStatus = () => {
@@ -39,12 +40,13 @@ export const UseKeranStatus = () => {
     const { client } = useMqtt();
 
     const formatRelayStatus = () => {
-        const combined = statusMsg.map(item1 => {
+        const combined = statusMsg.map((item1, i) => {
             const item2 = durationMsg.find(item => item.name === item1.name)
             const item3 = runtimeMsg.find(item => item.name === item1.name)
 
             return {
                 ...item1,
+                id: `${i+1}`,
                 duration: item2 ? item2.duration : 0,
                 runtime: item3 ? item3.runtime : 0
             }

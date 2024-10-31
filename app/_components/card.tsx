@@ -9,6 +9,7 @@ import { UseKeranStatus } from '../hooks/use-keran-status';
 import { Layers, SquareStack } from 'lucide-react';
 import { Hint } from './hint';
 import { Switch } from '@/components/ui/switch';
+import { PopoverSpecialMode } from './popover-special-mode';
 
 export const Card = () => {
     const data = UseKeranStatus()
@@ -16,6 +17,7 @@ export const Card = () => {
     
     const [keranData, setKeranData] = useState(data)
     const [isCollapse, setIsCollapse] = useState(true)
+    const [isSpesialMode, setIsSpesialMode] = useState(false)
 
     useEffect(() => {
         setKeranData(data);
@@ -27,8 +29,12 @@ export const Card = () => {
         }
     }, [data, setConnectStatus])
 
-    console.log({ keranData })
+    const onSwitchChange = (checked: boolean) =>{
+        setIsSpesialMode(checked)
+    }
 
+    console.log({keranData})
+    
     return ( 
         <div
             className="
@@ -106,11 +112,17 @@ export const Card = () => {
                 }
                 {
                     connectStatus === "DEVICE CONNECTED" &&
-                    <Switch 
-                        id="mode"
-                        // checked={onMode==="TIMER"}
-                        // onCheckedChange={onSwitchChange}
-                    />
+                    <PopoverSpecialMode 
+                        data={keranData}
+                        isSpesialMode={isSpesialMode}
+                        setIsSpesialMode={setIsSpesialMode}
+                    >
+                        <Switch 
+                            checked={isSpesialMode}
+                            onCheckedChange={() => onSwitchChange}
+                            className={isSpesialMode ? 'bg-font-primary' : "bg-neutral-200"}
+                        />
+                    </PopoverSpecialMode>
                 }
                 </div>
 

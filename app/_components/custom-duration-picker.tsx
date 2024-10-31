@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils';
 import React, { useState, useRef, useEffect } from 'react';
 
 interface CustomDurationPickerProps {
-    onSelect: (duration: number) => void;
+    onSelect: (duration: number) => void
 }
 
 const CustomDurationPicker = ({ onSelect }: CustomDurationPickerProps) => {

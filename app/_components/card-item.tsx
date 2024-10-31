@@ -40,11 +40,11 @@ export const CardItem = ({
     const isNewDuration = !durationOptionData.some(option => option.duration === duration);
     
     const { publishMessage } = usePublish()
-    const [durationActive, setDurationActive] = useState("")
-    const [onDuration, setOnDuration] = useState(duration)
     const [onMode, setOnMode] = useState(mode)
     const [onStatus, setOnStatus] = useState(status)
-
+    
+    const [onDuration, setOnDuration] = useState(duration)
+    const [durationActive, setDurationActive] = useState("")
     const [newDuration, setNewDuration]= useState(isNewDuration ? duration : 0)
     const [isDurationNewActive, setIsDurationNewActive] = useState(false)
 
@@ -149,9 +149,6 @@ export const CardItem = ({
                     transition-all  
                     duration-500 
                     bg-primary-1`, 
-                    // collapse
-                    // ? 'absolute '
-                    // : 'relative '
                 )}
             >
                 <div

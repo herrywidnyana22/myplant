@@ -17,8 +17,6 @@ export const DurationButtonNew = ({
         setIsDurationNewActive(!isDurationNewActive)
     }
 
-    console.log({status})
-
     return ( 
          <div
             onClick={handleButtonClick}
