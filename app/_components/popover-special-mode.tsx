@@ -3,12 +3,10 @@ import { DragDropContext, Draggable, Droppable, DropResult } from '@hello-pangea
 import { RelayStatusProps } from "../hooks/use-keran-status";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { Input } from "./input";
 import CustomDurationPicker from "./custom-duration-picker";
 import { Switch } from "@/components/ui/switch";
 import { PopoverDatePicker } from "./popover-calendar-picker";
 import { addHours, startOfDay } from "date-fns";
-import { CustomButton } from "./custom-button";
 import { Button } from "@/components/ui/button";
 import { UnfoldVertical } from "lucide-react";
 import { durationOptionData } from "../data/duration-option";
@@ -35,8 +33,8 @@ export const PopoverSpecialMode = ({
     const [listData, setListData] = useState(data)
     const [date, setDate] = useState<Date>(startOfDay(addHours(new Date(), 8)))
     const [isNow, setIsNow] = useState(false)
-    const [hour, setIsHour] = useState(0)
-    const [minute, setIsMinute] = useState(0)
+    const [hour, setHour] = useState(0)
+    const [minute, setMinute] = useState(0)
     const [durationActive, setDurationActive] = useState("")
     const [newDuration, setNewDuration]= useState(0)
     const [selectedDuration, setSelectedDuration]= useState(0)
@@ -155,34 +153,15 @@ export const PopoverSpecialMode = ({
                         </div>
                         <Switch onCheckedChange={() => setIsNow(!isNow)}/>
                     </div>
-                    <div className="relative flex gap-2">
-                        <PopoverDatePicker
-                            setDate={setDate}
-                            date={date}
-                            isNow={isNow}
-                        />
-
-                        <div>
-                            <div 
-                                className="
-                                    absolute
-                                    bg-white
-                                    z-20
-                                    right-2
-                                    w-56
-                                    text-center
-                                    mt-2
-                                    border-t 
-                                    border-spacing-1
-                                    rounded-md
-                                    p-2
-                                "
-                            >
-                                <CustomDurationPicker onSelect={handleNewDurationSelect} />
-                            </div>
-                        </div>
-
-                    </div>
+                    <PopoverDatePicker
+                        setDate={setDate}
+                        date={date}
+                        isNow={isNow}
+                        hour={hour}
+                        minute={minute}
+                        setHour={setHour}
+                        setMinute={setMinute}
+                    />
                     <div 
                         className="
                             relative
@@ -289,61 +268,66 @@ export const PopoverSpecialMode = ({
                     </div>
                     <DragDropContext onDragEnd={onDragEnd}>
                         <Droppable droppableId="droppable">
-                            {(provided, snapshot) => (
-                                <div
-                                    ref={provided.innerRef}
-                                    {...provided.droppableProps}
-                                    className={cn(`
-                                        relative
-                                        w-full
-                                        transition-all  
-                                        duration-500
-                                        tracking-wide
-                                        font-semibold
-                                        text-neutral-500`,
+                            {(provided) => (
+                            <div
+                                ref={provided.innerRef}
+                                {...provided.droppableProps}
+                                className={cn(`
+                                relative
+                                w-full
+                                transition-all  
+                                duration-500
+                                tracking-wide
+                                font-semibold
+                                text-neutral-500
+                                `)}
+                            >
+                                {listData.map((item, index) => (
+                                <Draggable key={item.id} index={index} draggableId={item.id}>
+                                    {(provided, snapshot) => (
+                                    <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        {...provided.dragHandleProps}
+                                        // Ensure you manage styles for smooth drag behavior
+                                        style={{
+                                        ...provided.draggableProps.style,
+                                        top: "auto", // prevent jumping
+                                        left: "auto", // prevent jumping
+                                        zIndex: snapshot.isDragging ? 50 : "auto", // increase z-index while dragging
+                                        }}
+                                        className={cn(
+                                        "mb-2",
+                                        snapshot.isDragging &&
+                                            "relative bg-gray-200 px-2 rounded-md z-50 opacity-100"
+                                        )}
+                                    >
+                                        <div className="group flex justify-between items-center">
+                                        <div className="flex gap-2 items-center">
+                                            <p>{item.name}</p>
+                                            <UnfoldVertical className="size-4 opacity-0 group-hover:opacity-100" />
+                                            <p className="font-medium">{selectedDuration} Menit</p>
+                                        </div>
+                                        <Hint label="Aktif/Nonaktif">
+                                            <Switch
+                                            checked={keranActives[index]}
+                                            onCheckedChange={(checked) => onKeranSwitch(checked, index)}
+                                            className={
+                                                keranActives[index] ? "bg-font-primary" : "bg-neutral-200"
+                                            }
+                                            />
+                                        </Hint>
+                                        </div>
+                                    </div>
                                     )}
-                                >
-                                    {listData.map((item, index) => (
-                                        <Draggable
-                                            key={item.id} 
-                                            index={index}
-                                            draggableId={item.id}
-                                        >
-                                            {(provided, snapshot) => (
-                                                <div
-                                                    ref={provided.innerRef}
-                                                    {...provided.draggableProps}
-                                                    {...provided.dragHandleProps}
-                                                    className={cn(`
-                                                        mb-2`,
-                                                        snapshot.isDragging && 
-                                                        "relative bg-gray-200 px-2 rounded-md z-50 opacity-100"
-                                                    )}
-                                                >
-                                                    <div className="group flex justify-between items-center">
-                                                        <div className="flex gap-2 items-center">
-                                                            <p> { item.name }</p>
-                                                            <UnfoldVertical className="size-4 opacity-0 group-hover:opacity-100"/>
-                                                            <p className="font-medium">{selectedDuration} Menit</p>
-                                                        </div>
-                                                        <Hint label="Akftif/Nonaktif">
-                                                            <Switch 
-                                                                checked={keranActives[index]} // Make sure to use the current value from `keranActives`
-                                                                onCheckedChange={(checked) => onKeranSwitch(checked, index)}
-                                                                className={keranActives[index] ? 'bg-font-primary' : "bg-neutral-200"} 
-                                                            />
-
-                                                        </Hint>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </Draggable>
-                                    ))}
-                                    {provided.placeholder}
-                                </div>
+                                </Draggable>
+                                ))}
+                                {provided.placeholder}
+                            </div>
                             )}
                         </Droppable>
-                    </DragDropContext>
+                        </DragDropContext>
+
                 </div>
                 <div>
                     <Button
