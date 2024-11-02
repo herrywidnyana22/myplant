@@ -6,7 +6,7 @@ import { ConnectionStatus } from './connection-status';
 import { CardItem } from './card-item';
 import { formatCapitalize } from '../utils/format-capitalize';
 import { UseKeranStatus } from '../hooks/use-keran-status';
-import { Layers, Settings, SquareStack } from 'lucide-react';
+import { CalendarClock, Clock, Layers, Settings, SquareStack } from 'lucide-react';
 import { Hint } from './hint';
 import { PopoverSpecialMode } from './popover-special-mode';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,8 @@ export const Card = () => {
     const [keranData, setKeranData] = useState(data)
     const [isCollapse, setIsCollapse] = useState(true)
     const [isSpesialMode, setIsSpesialMode] = useState(false)
+    const [dateLabel, setDateLabel] = useState<string | null>(null)
+    const [durationLabel, setDurationLabel] = useState<string | null>(null)
 
     useEffect(() => {
         setKeranData(data);
@@ -71,6 +73,18 @@ export const Card = () => {
                     </p>
                     
                 </div>
+                {   (dateLabel || durationLabel) && (
+                    <div className='flex flex-col text-sm text-zinc-500'>
+                        <span className='flex gap-2 items-center'>
+                            <CalendarClock className='size-4' />
+                            <p>{dateLabel}</p>
+                        </span>
+                        <span className='flex gap-2 items-center'>
+                            <Clock className='size-4' />
+                            <p>{durationLabel}</p>
+                        </span>
+                    </div>
+                )}
                 <div
                     className="
                         flex 
@@ -113,8 +127,16 @@ export const Card = () => {
                         data={keranData}
                         isSpesialMode={isSpesialMode}
                         setIsSpesialMode={setIsSpesialMode}
+                        setDateLabel ={setDateLabel}
+                        setDurationLabel ={setDurationLabel}
                     >
-                        <Settings className='size-5 cursor-pointer text-muted-foreground'/>
+                        <Settings 
+                            className='
+                                size-5 
+                                cursor-pointer 
+                                text-font-primary
+                            '
+                        />
                     </PopoverSpecialMode>
                 }
                 </div>

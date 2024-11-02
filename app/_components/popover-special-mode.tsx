@@ -21,14 +21,17 @@ type PopoverSpecialModeProps = {
     isSpesialMode?: boolean
     data: RelayStatusProps[]
     setIsSpesialMode: (isSpesialMode: boolean) => void
+    setDateLabel:(value: string) => void
+    setDurationLabel:(value: string) => void
 }
 
 export const PopoverSpecialMode = ({
     children,
     data,
     isSpesialMode,
-    setIsSpesialMode
-    
+    setIsSpesialMode,
+    setDateLabel,
+    setDurationLabel
 }: PopoverSpecialModeProps) => {
 
     const [listData, setListData] = useState(data)
@@ -78,20 +81,20 @@ export const PopoverSpecialMode = ({
 
     const onConfirm = () => {
         if (keranActives.every(value => !value)) {
-            return toast.error("Minimal 1 keran aktif!");
+            return toast.error("Minimal 1 keran aktif!")
         }
         if (selectedDuration <= 0) {
-            return toast.error("Tentukan durasi keran hidup!");
+            return toast.error("Tentukan durasi keran hidup!")
         }
 
         const topic = 'myplant/mode';
-        const msgSuccess = "Mode spesial berhasil diterapkan";
-        const msgError = "Mode spesial gagal diterapkan!";
-        const formattedDate = date.toISOString().split('T')[0];
+        const msgSuccess = "Mode spesial berhasil diterapkan"
+        const msgError = "Mode spesial gagal diterapkan!"
+        const formattedDate = date.toISOString().split('T')[0]
 
         // Create the `order` and `isActive` arrays
-        const order = listData.map(keran => Number(keran.id) - 1); // Extract the `id` values
-        const isActive = listData.map((_, i) => keranActives[i]); // Extract `isActive` values based on index
+        const order = listData.map(keran => Number(keran.id) - 1) // Extract the `id` values
+        const isActive = listData.map((_, i) => keranActives[i]) // Extract `isActive` values based on index
 
         // Construct the message
         const msg = JSON.stringify({
@@ -100,17 +103,21 @@ export const PopoverSpecialMode = ({
             nextDuration: selectedDuration,
             startDate: isNow ? "now" : formattedDate,
             startTime: isNow ? "now" : `${hour}:${minute}`,
-        });
+        })
 
-        publishMessage({ topic, msg, msgSuccess, msgError });
+        publishMessage({ topic, msg, msgSuccess, msgError })
 
-        console.log({ listData });
-    };
+        setDateLabel(isNow ? "now" : `${formattedDate} ${hour}:${minute}`)
+        setDurationLabel(`${selectedDuration} minute`)
+
+        setIsSpesialMode(false)
+        console.log({ listData })
+    }
 
 
 
     return (
-        <Popover onOpenChange={() => setIsSpesialMode(!isSpesialMode)}>
+        <Popover open={isSpesialMode} onOpenChange={() => setIsSpesialMode(!isSpesialMode)}>
             <PopoverTrigger asChild>
                 {children}
             </PopoverTrigger>
