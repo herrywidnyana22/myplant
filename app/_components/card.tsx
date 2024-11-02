@@ -6,10 +6,10 @@ import { ConnectionStatus } from './connection-status';
 import { CardItem } from './card-item';
 import { formatCapitalize } from '../utils/format-capitalize';
 import { UseKeranStatus } from '../hooks/use-keran-status';
-import { Layers, SquareStack } from 'lucide-react';
+import { Layers, Settings, SquareStack } from 'lucide-react';
 import { Hint } from './hint';
-import { Switch } from '@/components/ui/switch';
 import { PopoverSpecialMode } from './popover-special-mode';
+import { cn } from '@/lib/utils';
 
 export const Card = () => {
     const data = UseKeranStatus()
@@ -29,9 +29,6 @@ export const Card = () => {
         }
     }, [data, setConnectStatus])
 
-    const onSwitchChange = (checked: boolean) =>{
-        setIsSpesialMode(checked)
-    }
 
     console.log({keranData})
     
@@ -117,11 +114,7 @@ export const Card = () => {
                         isSpesialMode={isSpesialMode}
                         setIsSpesialMode={setIsSpesialMode}
                     >
-                        <Switch 
-                            checked={isSpesialMode}
-                            onCheckedChange={() => onSwitchChange}
-                            className={isSpesialMode ? 'bg-font-primary' : "bg-neutral-200"}
-                        />
+                        <Settings className='size-5 cursor-pointer text-muted-foreground'/>
                     </PopoverSpecialMode>
                 }
                 </div>
@@ -131,7 +124,7 @@ export const Card = () => {
                 connectStatus === "DEVICE CONNECTED" 
                 ? (
                     <div
-                        className=" 
+                        className={cn(` 
                             h-[560px]
                             relative
                             flex
@@ -139,8 +132,9 @@ export const Card = () => {
                             gap-5
                             p-2
                             overflow-y-auto
-                            scroll-smooth
-                        "
+                            scroll-smooth`,
+                            isCollapse && "overflow-hidden h-[600px]"
+                        )}
                     >
                         {
                             keranData.map((item, i) =>(

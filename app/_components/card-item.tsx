@@ -135,7 +135,7 @@ export const CardItem = ({
         >
             <div
                 style={{
-                    transform: !collapse ? `translateY(${id * -65}%)` : `translateY(0)`
+                    transform: collapse ? `translateY(${id * -65}%)` : `translateY(0)`
                 }}
                 className={cn(`
                     relative

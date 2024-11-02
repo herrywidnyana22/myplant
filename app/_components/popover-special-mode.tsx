@@ -14,6 +14,7 @@ import { DurationButton } from "./duration-button";
 import { DurationButtonNew } from "./duration-button-new";
 import { Hint } from "./hint";
 import { toast } from "sonner";
+import { usePublish } from "../hooks/use-publish";
 
 type PopoverSpecialModeProps = {
     children: React.ReactNode
@@ -42,6 +43,8 @@ export const PopoverSpecialMode = ({
     const [keranActives, setKeranActives] = useState(() => 
         data ? data.map(() => true) : []
     )
+
+    const { publishMessage } = usePublish()
 
     const reorder = (
         list: RelayStatusProps[],
@@ -73,26 +76,37 @@ export const PopoverSpecialMode = ({
         )
     }
 
-    const onConfirm = () =>{
-        if(keranActives.every(value => !value)) {
-            return toast.error("Minimal 1 keran aktif!")
+    const onConfirm = () => {
+        if (keranActives.every(value => !value)) {
+            return toast.error("Minimal 1 keran aktif!");
         }
-        if(selectedDuration <= 0) {
-            return toast.error("Tentukan durasi keran hidup!")
+        if (selectedDuration <= 0) {
+            return toast.error("Tentukan durasi keran hidup!");
         }
 
+        const topic = 'myplant/mode';
+        const msgSuccess = "Mode spesial berhasil diterapkan";
+        const msgError = "Mode spesial gagal diterapkan!";
         const formattedDate = date.toISOString().split('T')[0];
 
-        const selectedKeranData = listData.map((keran, i) =>({
-            ...keran,
-            isActive: keranActives[i],
-            nextDuration: isNow ? "now" : selectedDuration,
-            startDate: formattedDate,
-            startTime: `${hour}:${minute}`
-        }))
+        // Create the `order` and `isActive` arrays
+        const order = listData.map(keran => Number(keran.id) - 1); // Extract the `id` values
+        const isActive = listData.map((_, i) => keranActives[i]); // Extract `isActive` values based on index
 
-        console.log({selectedKeranData})
-    }
+        // Construct the message
+        const msg = JSON.stringify({
+            order,
+            isActive,
+            nextDuration: selectedDuration,
+            startDate: isNow ? "now" : formattedDate,
+            startTime: isNow ? "now" : `${hour}:${minute}`,
+        });
+
+        publishMessage({ topic, msg, msgSuccess, msgError });
+
+        console.log({ listData });
+    };
+
 
 
     return (
@@ -144,12 +158,31 @@ export const PopoverSpecialMode = ({
                         border-neutral-300 
                     "
                 >
-                    <span className="absolute -top-3 left-2 bg-white px-2">
+                    <span 
+                        className="
+                            absolute 
+                            -top-3 
+                            left-2 
+                            bg-white px-2
+                        "
+                    >
                         Waktu mulai
                     </span>
-                    <div className="flex justify-between gap-2 p-2">
-                        <div className="text-muted-foreground text-sm">
-                            Atur tanggal mulai keran, posisikan OFF jika memulai sekarang
+                    <div 
+                        className="
+                            flex 
+                            justify-between 
+                            gap-2 
+                            p-2
+                        "
+                    >
+                        <div 
+                            className="
+                                text-muted-foreground 
+                                text-sm
+                            "
+                        >
+                            Atur tanggal mulai keran, posisikan ON jika memulai sekarang
                         </div>
                         <Switch onCheckedChange={() => setIsNow(!isNow)}/>
                     </div>
@@ -177,7 +210,15 @@ export const PopoverSpecialMode = ({
                             rounded-xl
                         "
                     >
-                        <span className="absolute -top-3 left-2 bg-white px-2">
+                        <span 
+                            className="
+                                absolute 
+                                -top-3 
+                                left-2 
+                                px-2
+                                bg-white 
+                            "
+                        >
                             Durasi
                         </span>
                     {
@@ -249,17 +290,32 @@ export const PopoverSpecialMode = ({
                         flex 
                         gap-2 
                         p-2
-                        pt-4
+                        pt-8
                         my-4
                         border 
                         border-spacing-1
                         rounded-xl
                     "
                 >
-                    <span className="absolute -top-3 left-2 bg-white px-2 text-slate-500">
-                        Atur Keran
+                    <span 
+                        className="
+                        absolute 
+                        -top-3 
+                        left-2 
+                        px-2 
+                        bg-white
+                         text-slate-500
+                        "
+                    >
+                        Atur Urutan Nyala Keran
                     </span>
-                    <div className="flex flex-col gap-2">
+                    <div 
+                        className="
+                            flex 
+                            flex-col 
+                            gap-2
+                        "
+                    >
                         { listData.map((item, i) => (
                             <span key={i} className="font-semibold text-font-primary">
                                 #{i + 1}.
@@ -310,11 +366,11 @@ export const PopoverSpecialMode = ({
                                         </div>
                                         <Hint label="Aktif/Nonaktif">
                                             <Switch
-                                            checked={keranActives[index]}
-                                            onCheckedChange={(checked) => onKeranSwitch(checked, index)}
-                                            className={
-                                                keranActives[index] ? "bg-font-primary" : "bg-neutral-200"
-                                            }
+                                                checked={keranActives[index]}
+                                                onCheckedChange={(checked) => onKeranSwitch(checked, index)}
+                                                className={
+                                                    keranActives[index] ? "bg-font-primary" : "bg-neutral-200"
+                                                }
                                             />
                                         </Hint>
                                         </div>
