@@ -84,7 +84,7 @@ export const PopoverSpecialMode = ({
         )
     }
 
-    const onConfirm = () => {
+    const onConfirm = async() => {
         if (keranActives.every(value => !value)) {
             return toast.error("Minimal 1 keran aktif!")
         }
