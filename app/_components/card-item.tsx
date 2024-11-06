@@ -57,7 +57,6 @@ export const CardItem = ({
     // Ref to store the previous onMode
     const prevModeRef = useRef(mode)
 
-
     const onSwitchChange = async() =>{
         const modeValue:CardItemProps['mode'] = onMode === "TIMER" ? "NO TIMER" : "TIMER"
         
@@ -74,6 +73,7 @@ export const CardItem = ({
         setIsDurationNewActive(false)
 
     }
+
     const controlKeran = (action: typeof status) => {
         
         const topic = 'myplant/control'

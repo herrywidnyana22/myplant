@@ -15,6 +15,7 @@ import { DurationButtonNew } from "./duration-button-new";
 import { Hint } from "./hint";
 import { toast } from "sonner";
 import { usePublish } from "../hooks/use-publish";
+import { useConfirm } from "../hooks/use-confirm";
 
 type PopoverSpecialModeProps = {
     children: React.ReactNode
@@ -48,6 +49,10 @@ export const PopoverSpecialMode = ({
     )
 
     const { publishMessage } = usePublish()
+    const [ConfirmSwitched, confirm] = useConfirm(
+        `Yakin ingin mengubah ke mode ${onMode === "NO TIMER" ? "AUTO TIMER" : "MANUAL TIMER"}?`,
+        "Ini akan mematikan keran dan mereset waktu terlebih dahulu"
+    )
 
     const reorder = (
         list: RelayStatusProps[],
@@ -117,104 +122,54 @@ export const PopoverSpecialMode = ({
 
 
     return (
-        <Popover open={isSpesialMode} onOpenChange={() => setIsSpesialMode(!isSpesialMode)}>
-            <PopoverTrigger asChild>
-                {children}
-            </PopoverTrigger>
-            <PopoverContent 
-                className="
-                    relative 
-                    w-3/4
-                    flex 
-                    flex-col 
-                    gap-4 
-                "
-            >
-                <div>
-                    <h1 
-                        className="
-                            font-semibold 
-                            text-lg 
-                        "
-                    >
-                        Mode Spesial
-                    </h1>
-                    <p 
-                        className="
-                            text-muted-foreground 
-                            text-sm
-                        "
-                    >
-                        Kamu bisa atur durasi serta kapan keran diaktifkan
-                    </p>
-                </div>
-
-                <div 
+        <>
+            <ConfirmSwitched/>
+            <Popover open={isSpesialMode} onOpenChange={() => setIsSpesialMode(!isSpesialMode)}>
+                <PopoverTrigger asChild>
+                    {children}
+                </PopoverTrigger>
+                <PopoverContent 
                     className="
                         relative 
-                        flex
-                        flex-col
-                        justify-center
-                        items-center
-                        gap-2
-                        p-2 
-                        mt-4
-                        rounded-md 
-                        border 
-                        text-slate-500
-                        border-neutral-300 
+                        w-3/4
+                        flex 
+                        flex-col 
+                        gap-4 
                     "
                 >
-                    <span 
-                        className="
-                            absolute 
-                            -top-3 
-                            left-2 
-                            bg-white px-2
-                        "
-                    >
-                        Waktu mulai
-                    </span>
-                    <div 
-                        className="
-                            flex 
-                            justify-between 
-                            gap-2 
-                            p-2
-                        "
-                    >
-                        <div 
+                    <div>
+                        <h1 
+                            className="
+                                font-semibold 
+                                text-lg 
+                            "
+                        >
+                            Mode Spesial
+                        </h1>
+                        <p 
                             className="
                                 text-muted-foreground 
                                 text-sm
                             "
                         >
-                            Atur tanggal mulai keran, posisikan ON jika memulai sekarang
-                        </div>
-                        <Switch onCheckedChange={() => setIsNow(!isNow)}/>
+                            Kamu bisa atur durasi serta kapan keran diaktifkan
+                        </p>
                     </div>
-                    <PopoverDatePicker
-                        setDate={setDate}
-                        date={date}
-                        isNow={isNow}
-                        hour={hour}
-                        minute={minute}
-                        setHour={setHour}
-                        setMinute={setMinute}
-                    />
+
                     <div 
                         className="
-                            relative
-                            w-full
-                            py-2
-                            pt-4
-                            my-4
-                            grid 
-                            grid-cols-3 
-                            gap-1 
-                            justify-items-center
-                            border border-spacing-1
-                            rounded-xl
+                            relative 
+                            flex
+                            flex-col
+                            justify-center
+                            items-center
+                            gap-2
+                            p-2 
+                            mt-4
+                            rounded-md 
+                            border 
+                            text-slate-500
+                            border-neutral-300 
                         "
                     >
                         <span 
@@ -222,192 +177,263 @@ export const PopoverSpecialMode = ({
                                 absolute 
                                 -top-3 
                                 left-2 
-                                px-2
-                                bg-white 
+                                bg-white px-2
                             "
                         >
-                            Durasi
+                            Waktu mulai
                         </span>
-                    {
-                        durationOptionData.map((item, i) => (
-                            <DurationButton
-                                key={i}
-                                id={`${item.duration}-${item.id}`}
-                                status={"OFF"}
-                                initDuration={0}
-                                duration={item.duration}
-                                durationActive={durationActive} 
-                                setDurationActive={setDurationActive}
-                                setOnDuration={setSelectedDuration}
-                            />
-                        ))
-                    }
-                    {
-                        newDuration === 0 
-                        ? 
-                            (
-                                <DurationButtonNew
-                                    isDurationNewActive={isDurationNewActive}
-                                    setIsDurationNewActive={setIsDurationNewActive}
-                                />
-
-                            )
-                        : 
-                            (
-
+                        <div 
+                            className="
+                                flex 
+                                justify-between 
+                                gap-2 
+                                p-2
+                            "
+                        >
+                            <div 
+                                className="
+                                    text-muted-foreground 
+                                    text-sm
+                                "
+                            >
+                                Atur tanggal mulai keran, posisikan ON jika memulai sekarang
+                            </div>
+                            <Switch onCheckedChange={() => setIsNow(!isNow)}/>
+                        </div>
+                        <PopoverDatePicker
+                            setDate={setDate}
+                            date={date}
+                            isNow={isNow}
+                            hour={hour}
+                            minute={minute}
+                            setHour={setHour}
+                            setMinute={setMinute}
+                        />
+                        <div 
+                            className="
+                                relative
+                                w-full
+                                py-2
+                                pt-4
+                                my-4
+                                grid 
+                                grid-cols-3 
+                                gap-1 
+                                justify-items-center
+                                border border-spacing-1
+                                rounded-xl
+                            "
+                        >
+                            <span 
+                                className="
+                                    absolute 
+                                    -top-3 
+                                    left-2 
+                                    px-2
+                                    bg-white 
+                                "
+                            >
+                                Durasi
+                            </span>
+                        {
+                            durationOptionData.map((item, i) => (
                                 <DurationButton
-                                    id={`NEW-${newDuration}`}
+                                    key={i}
+                                    id={`${item.duration}-${item.id}`}
                                     status={"OFF"}
                                     initDuration={0}
-                                    duration={newDuration}
+                                    duration={item.duration}
                                     durationActive={durationActive} 
                                     setDurationActive={setDurationActive}
                                     setOnDuration={setSelectedDuration}
-                                    setNewDuration={setNewDuration}
-                                    isNew
                                 />
+                            ))
+                        }
+                        {
+                            newDuration === 0 
+                            ? 
+                                (
+                                    <DurationButtonNew
+                                        isDurationNewActive={isDurationNewActive}
+                                        setIsDurationNewActive={setIsDurationNewActive}
+                                    />
+
+                                )
+                            : 
+                                (
+
+                                    <DurationButton
+                                        id={`NEW-${newDuration}`}
+                                        status={"OFF"}
+                                        initDuration={0}
+                                        duration={newDuration}
+                                        durationActive={durationActive} 
+                                        setDurationActive={setDurationActive}
+                                        setOnDuration={setSelectedDuration}
+                                        setNewDuration={setNewDuration}
+                                        isNew
+                                    />
+                                )
+                        }
+                        </div>
+                        {
+
+                            isDurationNewActive && 
+                            (
+                                <div 
+                                    className="
+                                        w-2/3
+                                        text-center
+                                        mt-2
+                                        border-t 
+                                        border-spacing-1
+                                        
+                                    "
+                                >
+                                    <CustomDurationPicker onSelect={handleNewDurationSelect} />
+                                </div>
+
                             )
-                    }
+                        
+                        }
                     </div>
-                    {
 
-                        isDurationNewActive && 
-                        (
-                            <div 
-                                className="
-                                    w-2/3
-                                    text-center
-                                    mt-2
-                                    border-t 
-                                    border-spacing-1
-                                    
-                                "
-                            >
-                                <CustomDurationPicker onSelect={handleNewDurationSelect} />
-                            </div>
-
-                        )
-                    
-                    }
-                </div>
-
-                <div 
-                    className="
-                        relative
-                        flex 
-                        gap-2 
-                        p-2
-                        pt-8
-                        my-4
-                        border 
-                        border-spacing-1
-                        rounded-xl
-                    "
-                >
-                    <span 
-                        className="
-                        absolute 
-                        -top-3 
-                        left-2 
-                        px-2 
-                        bg-white
-                         text-slate-500
-                        "
-                    >
-                        Atur Urutan Nyala Keran
-                    </span>
                     <div 
                         className="
+                            relative
                             flex 
-                            flex-col 
-                            gap-2
+                            gap-2 
+                            p-2
+                            pt-8
+                            my-4
+                            border 
+                            border-spacing-1
+                            rounded-xl
                         "
                     >
-                        { listData.map((item, i) => (
-                            <span key={i} className="font-semibold text-font-primary">
-                                #{i + 1}.
-                            </span>
-                        ))}
-                    </div>
-                    <DragDropContext onDragEnd={onDragEnd}>
-                        <Droppable droppableId="droppable">
-                            {(provided) => (
-                            <div
-                                ref={provided.innerRef}
-                                {...provided.droppableProps}
-                                className={cn(`
-                                relative
-                                w-full
-                                transition-all  
-                                duration-500
-                                tracking-wide
-                                font-semibold
-                                text-neutral-500
-                                `)}
-                            >
-                                {listData.map((item, index) => (
-                                <Draggable key={item.id} index={index} draggableId={item.id}>
-                                    {(provided, snapshot) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        // Ensure you manage styles for smooth drag behavior
-                                        style={{
-                                        ...provided.draggableProps.style,
-                                        top: "auto", // prevent jumping
-                                        left: "auto", // prevent jumping
-                                        zIndex: snapshot.isDragging ? 50 : "auto", // increase z-index while dragging
-                                        }}
-                                        className={cn(
-                                        "mb-2",
-                                        snapshot.isDragging &&
-                                            "relative bg-gray-200 px-2 rounded-md z-50 opacity-100"
-                                        )}
-                                    >
-                                        <div className="group flex justify-between items-center">
-                                        <div className="flex gap-2 items-center">
-                                            <p>{item.name}</p>
-                                            <UnfoldVertical className="size-4 opacity-0 group-hover:opacity-100" />
-                                            <p className="font-medium">{selectedDuration} Menit</p>
-                                        </div>
-                                        <Hint label="Aktif/Nonaktif">
-                                            <Switch
-                                                checked={keranActives[index]}
-                                                onCheckedChange={(checked) => onKeranSwitch(checked, index)}
-                                                className={
-                                                    keranActives[index] ? "bg-font-primary" : "bg-neutral-200"
-                                                }
-                                            />
-                                        </Hint>
-                                        </div>
-                                    </div>
+                        <span 
+                            className="
+                            absolute 
+                            -top-3 
+                            left-2 
+                            px-2 
+                            bg-white
+                            text-slate-500
+                            "
+                        >
+                            Atur Urutan Nyala Keran
+                        </span>
+                        <div 
+                            className="
+                                flex 
+                                flex-col 
+                                gap-2
+                            "
+                        >
+                            { listData.map((item, i) => (
+                                <span key={i} className="font-semibold text-font-primary">
+                                    #{i + 1}.
+                                </span>
+                            ))}
+                        </div>
+                        <DragDropContext onDragEnd={onDragEnd}>
+                            <Droppable droppableId="droppable">
+                                {(provided) => (
+                                <div
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    className={cn(`
+                                        relative
+                                        w-full
+                                        transition-all  
+                                        duration-500
+                                        tracking-wide
+                                        font-semibold
+                                        text-neutral-500`
                                     )}
-                                </Draggable>
-                                ))}
-                                {provided.placeholder}
-                            </div>
-                            )}
-                        </Droppable>
-                        </DragDropContext>
+                                >
+                                    {listData.map((item, index) => (
+                                    <Draggable key={item.id} index={index} draggableId={item.id}>
+                                        {(provided, snapshot) => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.draggableProps}
+                                            {...provided.dragHandleProps}
+                                            style={{
+                                                ...provided.draggableProps.style,
+                                                top: "auto", // prevent jumping
+                                                left: "auto", // prevent jumping
+                                                zIndex: snapshot.isDragging ? 50 : "auto", // increase z-index while dragging
+                                            }}
+                                            className={cn(
+                                                "mb-2",
+                                                snapshot.isDragging &&
+                                                "relative bg-gray-200 px-2 rounded-md z-50 opacity-100"
+                                            )}
+                                        >
+                                            <div 
+                                                className="
+                                                    group 
+                                                    flex 
+                                                    justify-between 
+                                                    items-center
+                                                "
+                                            >
+                                            <div 
+                                                className="
+                                                    flex 
+                                                    gap-2 
+                                                    items-center
+                                                "
+                                            >
+                                                <p>{item.name}</p>
+                                                <UnfoldVertical 
+                                                    className="
+                                                        size-4 
+                                                        opacity-0 
+                                                        group-hover:opacity-100
+                                                    " 
+                                                />
+                                                <p className="font-medium">{selectedDuration} Menit</p>
+                                            </div>
+                                            <Hint label="Aktif/Nonaktif">
+                                                <Switch
+                                                    checked={keranActives[index]}
+                                                    onCheckedChange={(checked) => onKeranSwitch(checked, index)}
+                                                    className={
+                                                        keranActives[index] ? "bg-font-primary" : "bg-neutral-200"
+                                                    }
+                                                />
+                                            </Hint>
+                                            </div>
+                                        </div>
+                                        )}
+                                    </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                </div>
+                                )}
+                            </Droppable>
+                            </DragDropContext>
 
-                </div>
-                <div>
-                    <Button
-                        onClick={onConfirm}
-                        size={"lg"}
-                        variant={"secondary"}
-                        className="
-                            w-full
-                            text-white
-                            bg-font-primary
-                            hover:text-zinc-600
-                        "
-                    >
-                        Confirm
-                    </Button>
-                </div>
-            </PopoverContent>
-        </Popover>
+                    </div>
+                    <div>
+                        <Button
+                            onClick={onConfirm}
+                            size={"lg"}
+                            variant={"secondary"}
+                            className="
+                                w-full
+                                text-white
+                                bg-font-primary
+                                hover:text-zinc-600
+                            "
+                        >
+                            Confirm
+                        </Button>
+                    </div>
+                </PopoverContent>
+            </Popover>
+        </>
     );
 };
