@@ -58,7 +58,7 @@ export const UseDeviceStatus = () => {
     useEffect(() => {
         if (client) {
             // Subscribe to the topics
-            client.subscribe('myplant/schedule', (err) => {
+            client.subscribe('myplant/devicemode', (err) => {
                 if (err) {
                     console.error('Failed to subscribe to schedule status:', err)
                 }
