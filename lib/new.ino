@@ -19,8 +19,8 @@ const char *mqtt_topic_web = "myplant/web";
 const char *mqtt_topic_status = "myplant/status";
 const char *mqtt_topic_duration = "myplant/duration";
 const char *mqtt_topic_runtime = "myplant/runtime";
-const char *mqtt_topic_mode = "myplant/mode";
-const char *mqtt_topic_schedule = "myplant/schedule";
+const char *mqtt_topic_relay_mode = "myplant/keranmode";
+const char *mqtt_topic_device_mode = "myplant/devicemode";
 
 // Number of relays
 const int numberOfRelays = 6; // You can change this number to adjust the relay count
@@ -29,6 +29,7 @@ const int numberOfRelays = 6; // You can change this number to adjust the relay 
 std::vector<int> relayPins = {D1, D2, D3, D4, D5, D6}; // Ensure this matches the number of relays
 
 // Relay states and runtimes
+
 std::vector<String> relayState(numberOfRelays, "OFF");
 std::vector<unsigned long> relayDuration(numberOfRelays, 0);
 std::vector<unsigned long> relayRuntime(numberOfRelays, 0);
@@ -39,15 +40,16 @@ PubSubClient mqtt_client(espClient);
 Ticker relayTicker;
 
 // Variables for scheduling
-char deviceMode = "MANUAL"; // SCHEDULE | MANUAL
-char startDate = "";
-char startTime = "";
+String deviceMode = "MANUAL"; // SCHEDULE | MANUAL
+String startDate = "";
+String startTime = "";
+
 bool sequenceActive = false;
 unsigned long nextRelayActivationTime = 0; // Variable to track when to activate the next relay
 unsigned long sequenceStartTime = 0;
 
-int currentRelayIndex = 0;
-int sequenceDuration = 0;
+std::vector<int>::size_type currentRelayIndex = 0;
+std::vector<int>::size_type sequenceDuration = 0;
 
 std::vector<int> relayOrder(numberOfRelays);
 std::vector<bool> relayIsActive(numberOfRelays, false);
@@ -106,7 +108,7 @@ void connectToMQTTBroker()
     {
       mqtt_client.subscribe(mqtt_topic_control);
       mqtt_client.subscribe(mqtt_topic_web);
-      mqtt_client.subscribe(mqtt_topic_mode);
+      mqtt_client.subscribe(mqtt_topic_relay_mode);
       Serial.println("Connected to MQTT Broker");
     }
     else
@@ -142,7 +144,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
   {
     processMessage(message);
   }
-  else if (String(topic) == mqtt_topic_mode)
+  else if (String(topic) == mqtt_topic_relay_mode)
   {
     scheduleRelays(message);
   }
@@ -279,10 +281,10 @@ void publishRelayRuntime()
 void publishModeStatus()
 {
   StaticJsonDocument<256> doc;
-  doc["deviceMode"] = deviceMode
+  doc["deviceMode"] = deviceMode;
 
-      // Check if startDate and startTime are "now"
-      if (startDate == "now" && startTime == "now")
+  // Check if startDate and startTime are "now"
+  if (startDate == "now" && startTime == "now")
   {
     doc["startDate"] = "now"; // Send "now" as a string
     doc["startTime"] = "now"; // Include startTime as well
@@ -297,7 +299,7 @@ void publishModeStatus()
 
   char buffer[256];
   serializeJson(doc, buffer, sizeof(buffer));
-  mqtt_client.publish(mqtt_topic_schedule, buffer);
+  mqtt_client.publish(mqtt_topic_device_mode, buffer);
   Serial.println("Published schedule status");
 }
 
@@ -324,8 +326,8 @@ void scheduleRelays(String message)
   JsonArray order = doc["order"];
   JsonArray isActive = doc["isActive"];
   sequenceDuration = doc["nextDuration"].as<int>() * 60000;
-  startDate = doc["startDate"];
-  startTime = doc["startTime"];
+  startDate = doc["startDate"].as<String>();
+  startTime = doc["startTime"].as<String>();
 
   // Update relay orders and active states
   for (int i = 0; i < order.size(); i++)
