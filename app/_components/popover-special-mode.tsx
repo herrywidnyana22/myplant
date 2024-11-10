@@ -20,6 +20,7 @@ import { useConfirm } from "../hooks/use-confirm";
 type PopoverSpecialModeProps = {
     children: React.ReactNode
     isSpesialMode?: boolean
+
     data: RelayStatusProps[]
     setIsSpesialMode: (isSpesialMode: boolean) => void
     setDateLabel:(value: string) => void
@@ -50,7 +51,7 @@ export const PopoverSpecialMode = ({
 
     const { publishMessage } = usePublish()
     const [ConfirmSwitched, confirm] = useConfirm(
-        `Yakin ingin mengubah ke mode ${onMode === "NO TIMER" ? "AUTO TIMER" : "MANUAL TIMER"}?`,
+        `Yakin ingin mengubah mode?`,
         "Ini akan mematikan keran dan mereset waktu terlebih dahulu"
     )
 
@@ -92,7 +93,7 @@ export const PopoverSpecialMode = ({
             return toast.error("Tentukan durasi keran hidup!")
         }
 
-        const topic = 'myplant/mode';
+        const topic = 'myplant/keranmode';
         const msgSuccess = "Mode spesial berhasil diterapkan"
         const msgError = "Mode spesial gagal diterapkan!"
         const formattedDate = date.toISOString().split('T')[0]

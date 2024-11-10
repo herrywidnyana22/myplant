@@ -6,10 +6,11 @@ import { ConnectionStatus } from './connection-status';
 import { CardItem } from './card-item';
 import { formatCapitalize } from '../utils/format-capitalize';
 import { UseKeranStatus } from '../hooks/use-keran-status';
-import { CalendarClock, Clock, Layers, Settings, SquareStack } from 'lucide-react';
+import { CalendarClock, Clock, Layers, Play, Settings, SquareStack } from 'lucide-react';
 import { Hint } from './hint';
 import { PopoverSpecialMode } from './popover-special-mode';
 import { cn } from '@/lib/utils';
+import { DynamicIsland } from './dynamic-island';
 
 export const Card = () => {
     const data = UseKeranStatus()
@@ -20,6 +21,8 @@ export const Card = () => {
     const [isSpesialMode, setIsSpesialMode] = useState(false)
     const [dateLabel, setDateLabel] = useState<string | null>(null)
     const [durationLabel, setDurationLabel] = useState<string | null>(null)
+    const [runningNames , setRunningNames] = useState<string>("")
+    
 
     useEffect(() => {
         setKeranData(data);
@@ -29,6 +32,14 @@ export const Card = () => {
         } else {
             setConnectStatus("DEVICE CONNECTED")
         }
+
+        const runningKeran= data
+            .filter(item => item.status === "RUNNING")
+            .map(item => item.name)
+            .join(", ")
+
+        setRunningNames(runningKeran)
+
     }, [data, setConnectStatus])
 
 
@@ -73,18 +84,30 @@ export const Card = () => {
                     </p>
                     
                 </div>
-                {   (dateLabel || durationLabel) && (
-                    <div className='flex flex-col text-sm text-zinc-500'>
-                        <span className='flex gap-2 items-center'>
-                            <CalendarClock className='size-4' />
-                            <p>{dateLabel}</p>
+                    <DynamicIsland>
+                    {       
+                        (dateLabel || durationLabel) && (
+                        <>
+                            <span className='flex gap-2 items-center'>
+                                <CalendarClock className='size-4' />
+                                <p>{dateLabel}</p>
+                            </span>
+                            <span className='flex gap-2 items-center'>
+                                <Clock className='size-4' />
+                                <p>{durationLabel}</p>
+                            </span>
+
+                        </>
+                    )}
+                    {
+                        runningNames !== "" &&
+                        <span className='flex gap-2'>
+                            <Play className='size-4 flex-shrink-0' />
+                            <p className='truncate'>{runningNames}</p>
                         </span>
-                        <span className='flex gap-2 items-center'>
-                            <Clock className='size-4' />
-                            <p>{durationLabel}</p>
-                        </span>
-                    </div>
-                )}
+                    }
+
+                    </DynamicIsland>
                 <div
                     className="
                         flex 

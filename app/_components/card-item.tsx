@@ -2,10 +2,8 @@
 
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
-import { Pause, Play, Square } from "lucide-react";
 import { DotStatus } from "./dot-status";
 import { KeranStatusProps } from "../types/KeranStatusType";
-import { ControlButton } from "./control-button";
 import { useEffect, useRef, useState } from "react";
 
 import { usePublish } from "../hooks/use-publish";
@@ -17,6 +15,7 @@ import { DurationButtonNew } from "./duration-button-new";
 
 import CustomDurationPicker from "./custom-duration-picker";
 import TimeCountdown from "./time-countdown";
+import { ControlButtonGroup } from "./control-button-group";
 
 export type CardItemProps={
     id:number
@@ -259,48 +258,13 @@ export const CardItem = ({
                     )
 
                 }
-                <div 
-                    className={cn(`
-                        flex 
-                        justify-between 
-                        items-center 
-                        gap-2
-                        p-3
-                        rounded-2xl`,
-                        onStatus === "RUNNING" && 'shadow-card-shadow-inner mt-2'
-                    )}
-                >
-                    <ControlButton
-                        onClick={() => handleControlButton("OFF")}
-                        status={onStatus}
-                        icon={Square}
-                        iconClassName={"size-5 bg-rose-500 text-rose-500 rounded-sm"}
-                        className={(onStatus === "RUNNING" ||  onStatus === "PAUSED") 
-                            ? 'shadow-shadow-button' 
-                            : 'opacity-50 pointer-events-none'
-                        }
-                    />
-                    <ControlButton 
-                        onClick={() => handleControlButton("RUNNING")}
-                        status={onStatus}
-                        icon={Play}
-                        iconClassName={"size-8 text-green-500"}
-                        className={onStatus === "RUNNING" 
-                            ? 'shadow-shadow-button-active opacity-50 pointer-events-none'
-                            : 'shadow-shadow-button'
-                        }
-                    />
-                    <ControlButton 
-                        onClick={() => handleControlButton("PAUSED")}
-                        status={onStatus}
-                        icon={Pause}
-                        iconClassName={"size-5 text-orange-500"}
-                        className={onStatus === "PAUSED"  || onStatus !== "RUNNING"
-                            ? 'shadow-shadow-button-active opacity-50 pointer-events-none'
-                            : 'shadow-shadow-button'
-                        }
-                    />
-                </div>
+                <ControlButtonGroup 
+                    status={onStatus}
+                    className={onStatus === "RUNNING" ? 'shadow-card-shadow-inner mt-2' : undefined}
+                    handleStop={() => handleControlButton("OFF")}
+                    handlePlay={() => handleControlButton("RUNNING")}
+                    handlePause={() => handleControlButton("PAUSED")}
+                />
             {
 
                 isDurationNewActive && 
