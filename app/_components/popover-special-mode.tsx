@@ -15,7 +15,7 @@ import { DurationButtonNew } from "./duration-button-new";
 import { Hint } from "./hint";
 import { toast } from "sonner";
 import { usePublish } from "../hooks/use-publish";
-import { useConfirm } from "../hooks/use-confirm";
+// import { useConfirm } from "../hooks/use-confirm";
 
 type PopoverSpecialModeProps = {
     children: React.ReactNode
@@ -50,10 +50,10 @@ export const PopoverSpecialMode = ({
     )
 
     const { publishMessage } = usePublish()
-    const [ConfirmSwitched, confirm] = useConfirm(
-        `Yakin ingin mengubah mode?`,
-        "Ini akan mematikan keran dan mereset waktu terlebih dahulu"
-    )
+    // const [ConfirmSwitched, confirm] = useConfirm(
+    //     `Yakin ingin mengubah mode?`,
+    //     "Ini akan mematikan keran dan mereset waktu terlebih dahulu"
+    // )
 
     const reorder = (
         list: RelayStatusProps[],
@@ -123,8 +123,9 @@ export const PopoverSpecialMode = ({
 
 
     return (
+        // 
+        //     <ConfirmSwitched/>
         <>
-            <ConfirmSwitched/>
             <Popover open={isSpesialMode} onOpenChange={() => setIsSpesialMode(!isSpesialMode)}>
                 <PopoverTrigger asChild>
                     {children}
