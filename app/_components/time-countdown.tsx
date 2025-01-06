@@ -7,11 +7,13 @@ import { formatTime } from '../utils/format-time';
 interface TimeCountProps {
   initialRuntime: number
   status:  KeranStatusProps["status"]
+  className?: string
 }
 
 const TimeCountdown = ({ 
     initialRuntime,
-    status="OFF"
+    status="OFF",
+    className
 }: TimeCountProps) => {
 
     const [runtime, setRuntime] = useState(initialRuntime)
@@ -50,6 +52,7 @@ const TimeCountdown = ({
             className={cn('text-slate-500',
                 status === "RUNNING" && 'text-emerald-500',
                 status === "PAUSED" && 'text-orange-500',
+                className
             )}
         >
             {formatTime(runtime)}

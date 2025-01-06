@@ -16,7 +16,7 @@ const CustomDurationPicker = ({ onSelect }: CustomDurationPickerProps) => {
     const centerIndex = Math.floor(visibleItems / 2) // Center position for highlight
 
     const hours = Array.from({ length: 24 }, (_, i) => i)
-    const minutes = Array.from({ length: 59 }, (_, i) => i+1)
+    const minutes = Array.from({ length: 60 }, (_, i) => i)
 
     // Set scroll position to highlight "0" on initial render
     useEffect(() => {
@@ -209,6 +209,7 @@ const CustomDurationPicker = ({ onSelect }: CustomDurationPickerProps) => {
 
             <button
                 onClick={handleConfirm}
+                disabled={selectedHours === 0 && selectedMinutes === 0}
                 className="
                     mt-4 
                     px-4 

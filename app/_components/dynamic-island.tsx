@@ -8,7 +8,7 @@ export const DynamicIsland = ({children}: DynamicIslandProps) => {
             className="
                 max-w-[50%]
                 flex 
-                flex-col 
+                flex-col
                 px-6
                 py-1
                 rounded-full

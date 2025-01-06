@@ -134,7 +134,8 @@ export const CardItem = ({
         >
             <div
                 style={{
-                    transform: collapse ? `translateY(${id * -65}%)` : `translateY(0)`
+                    transform: collapse ? `translateY(${id * -87}%)` : `translateY(0)`
+                    // transform: collapse ? `translateY(${id * -65}%)` : `translateY(0)`
                 }}
                 className={cn(`
                     relative
@@ -159,7 +160,7 @@ export const CardItem = ({
                 >
                     <DotStatus connectStatus={onStatus}/>
                     <p 
-                        className="
+                        className={cn(`
                             absolute
                             -top-2 
                             left-1/2 
@@ -167,8 +168,9 @@ export const CardItem = ({
                             -translate-x-1/2 
                             text-md 
                             font-semibold 
-                            text-font-primary
-                        "
+                            text-font-primary`,
+                            collapse && '-top-5 text-sm'
+                        )}
                     >
                         {label}
                     </p>
@@ -188,6 +190,10 @@ export const CardItem = ({
                 >
                     <div 
                         className="
+                            relative
+                            flex
+                            items-center
+                            justify-center
                             text-muted-foreground 
                             font-bold
                         "
@@ -195,6 +201,7 @@ export const CardItem = ({
                         <TimeCountdown
                             initialRuntime={time} 
                             status={onStatus}
+                            className={collapse ? 'absolute -top-6 text-sm' : ""}
                         />
                     </div>
                 </div>

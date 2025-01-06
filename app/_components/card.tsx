@@ -17,7 +17,7 @@ export const Card = () => {
     const { connectStatus,setConnectStatus } = useMqtt()
     
     const [keranData, setKeranData] = useState(data)
-    const [isCollapse, setIsCollapse] = useState(true)
+    const [isCollapse, setIsCollapse] = useState(false)
     const [isSpesialMode, setIsSpesialMode] = useState(false)
     const [dateLabel, setDateLabel] = useState<string | null>(null)
     const [durationLabel, setDurationLabel] = useState<string | null>(null)
@@ -101,10 +101,12 @@ export const Card = () => {
                     )}
                     {
                         runningNames !== "" &&
-                        <span className='flex gap-2'>
-                            <Play className='size-4 flex-shrink-0' />
-                            <p className='truncate'>{runningNames}</p>
-                        </span>
+                        <Hint label={`ON: ${runningNames}`}>
+                            <span className='flex gap-2'>
+                                <Play className='size-4 flex-shrink-0' />
+                                <p className='truncate'>{runningNames}</p>
+                            </span>
+                        </Hint>
                     }
 
                     </DynamicIsland>
@@ -170,7 +172,7 @@ export const Card = () => {
                 ? (
                     <div
                         className={cn(` 
-                            h-[560px]
+                            h-[600px]
                             relative
                             flex
                             flex-col
