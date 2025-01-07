@@ -81,12 +81,6 @@ export const UseKeranStatus = () => {
 
                 const parsedMessage = JSON.parse(message.toString())
 
-                try {
-                    
-                } catch (error) {
-                    toast.error(`Failed to parse MQTT status message:, ${error}`)
-                }
-
                 if (topic === 'myplant/status') {
                     try {
                         const statusArray: StatusMessageProps[] = Object.entries(parsedMessage).map(
