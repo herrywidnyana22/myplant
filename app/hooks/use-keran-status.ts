@@ -8,6 +8,8 @@ export type RelayStatusProps = {
     name: string
     duration: number
     runtime: number
+    isScheduled: boolean
+    isAlternate: boolean //menyala bergantian
 } & KeranStatusProps
 
 type StatusMessageProps = {
@@ -44,9 +46,11 @@ export const UseKeranStatus = () => {
 
             return {
                 ...item1,
-                id: `keran${i+1}`,
+                id: `keran${i}`,
                 duration: item2 ? item2.duration : 0,
-                runtime: item3 ? item3.runtime : 0
+                runtime: item3 ? item3.runtime : 0,
+                isScheduled: false,
+                isAlternate: true
             }
         })
 

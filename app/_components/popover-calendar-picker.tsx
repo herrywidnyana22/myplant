@@ -2,7 +2,7 @@
 
 
 import { CalendarIcon } from "@radix-ui/react-icons"
-import { addHours, format, isBefore, startOfDay } from "date-fns"
+import { format } from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -13,27 +13,47 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import React, { useState } from "react"
-import CustomTimePicker, { CustomTimePickerProps } from "./custom-time-picker"
+import CustomTimePicker from "./custom-time-picker"
 
 type PopoverDatePickerProps = {
     isNow?: boolean
-    date: Date
-    setDate: (date: Date) => void
-} & CustomTimePickerProps
+    selectedDate: Date
+    setSelectedDate: (date: Date) => void
+    hour: number
+    minute: number
+    setHour: (value:number) => void
+    setMinute: (value:number) => void
+}
 
 export function PopoverDatePicker({
     isNow, 
-    date, 
+    selectedDate, 
     hour,
     minute,
     setHour,
     setMinute,
-    setDate
+    setSelectedDate
 }: PopoverDatePickerProps) {
     const [isOpen, setIsOpen] = useState(false)
+    const [isDateNow, setIsDateNow] = useState(true)
 
-    const dateInBali = startOfDay(addHours(new Date(), 8));
-    
+    const isBeforeToday = (date: Date) => {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0); // Normalize to midnight
+        return date < today;
+    }
+
+    const handleDateSelect = (date: Date) => {
+        setSelectedDate(date)
+
+        // Compare selected date with today's date
+        const today = new Date()
+        today.setHours(0, 0, 0, 0) // Normalize to midnight
+        const selected = new Date(date)
+        selected.setHours(0, 0, 0, 0) // Normalize to midnight
+
+        setIsDateNow(selected.getTime() === today.getTime());
+    }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -57,9 +77,9 @@ export function PopoverDatePicker({
                 {
                     isNow 
                     ? <span> Sekarang</span> 
-                    : date 
+                    : selectedDate 
                         ?   <span className="flex gap-2">
-                                <p> {format(date, 'dd MMMM yyyy')} </p>
+                                <p> {format(selectedDate, 'dd MMMM yyyy')} </p>
                                 <p> {hour < 10 ? `0${hour}` : hour}:{minute < 10 ? `0${minute}` : minute} </p>
                                
                             </span>
@@ -71,9 +91,9 @@ export function PopoverDatePicker({
             <div className="flex gap-2">
                 <Calendar
                     mode="single"
-                    selected={date}
-                    onSelect={(selectedDate) => setDate(selectedDate!)}
-                    disabled={(tgl) =>isBefore(startOfDay(tgl), dateInBali)}
+                    selected={selectedDate}
+                    onSelect={(date) => handleDateSelect(date!)}
+                    disabled={(tgl) => isBeforeToday(tgl)}
                     initialFocus
                 />
                 <CustomTimePicker
@@ -81,6 +101,7 @@ export function PopoverDatePicker({
                     hour={hour}
                     setMinute={setMinute}
                     setHour={setHour}
+                    isDateNow={isDateNow}
                 />
             </div>
             <Button 

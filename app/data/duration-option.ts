@@ -9,5 +9,5 @@ export const durationOptionData: DurationOption[] = [
     { id: 2, duration: 45 },
     { id: 3, duration: 30 },
     { id: 4, duration: 15 },
-    { id: 5, duration: 5 }
+    { id: 5, duration: 1 }
 ];

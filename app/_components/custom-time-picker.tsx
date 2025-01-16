@@ -1,11 +1,12 @@
 import { cn } from '@/lib/utils';
 import React, { useRef, useEffect } from 'react';
 
-export interface CustomTimePickerProps {
+interface CustomTimePickerProps {
     hour: number
     minute: number
     setHour: (value:number) => void
     setMinute: (value:number) => void
+    isDateNow: boolean
 }
 
 const CustomTimePicker = ({ 
@@ -13,6 +14,7 @@ const CustomTimePicker = ({
     minute,
     setHour,
     setMinute,
+    isDateNow
  }: CustomTimePickerProps) => {
 
     const hoursRef = useRef<HTMLDivElement>(null)
@@ -23,23 +25,38 @@ const CustomTimePicker = ({
 
     const hours = Array.from({ length: 24 }, (_, i) => i)
     const minutes = Array.from({ length: 60 }, (_, i) => i)
-
-   
-    useEffect(() => {
-        if (hoursRef.current) {
-            hoursRef.current.scrollTop = 0 
-            setHour(0) 
-        }
-        if (minutesRef.current) {
-            minutesRef.current.scrollTop = 0 
-            setMinute(0) 
-        }
-    }, [setHour, setMinute])
     
-    const getSelectedItem = (ref: React.RefObject<HTMLDivElement>, items: number[]) => {
+    // Calculate default hour and minute based on the current time
+    const now = new Date();
+    let defaultHour = isDateNow ? now.getHours() : hour;
+    let defaultMinute = isDateNow ? now.getMinutes() + 5 : minute;
+
+    if (defaultMinute >= 60) {
+        defaultMinute -= 60;
+        defaultHour = (defaultHour + 1) % 24;
+    }
+
+useEffect(() => {
+    if (isDateNow) {
+        setHour(defaultHour);
+        setMinute(defaultMinute);
+    } 
+
+    if (hoursRef.current) {
+        const hourScrollPosition = (defaultHour + 1) * itemHeight
+        hoursRef.current.scrollTop = hourScrollPosition
+    }
+    if (minutesRef.current) {
+        const minuteScrollPosition = (defaultMinute + 1) * itemHeight
+        minutesRef.current.scrollTop = minuteScrollPosition
+    }
+    }, [isDateNow])
+
+    const getSelectedItem = (ref: React.RefObject<HTMLDivElement>, items: number[], limit:number) => {
         if (ref.current) {
-            const currentScrollTop = ref.current.scrollTop;
+            const currentScrollTop = ref.current.scrollTop
             const closestIndex = Math.round(currentScrollTop / itemHeight) - 1
+            
             return items[closestIndex] !== undefined ? items[closestIndex] : 0
         }
         return 0;
@@ -49,11 +66,23 @@ const CustomTimePicker = ({
     const handleScroll = (
         ref: React.RefObject<HTMLDivElement>,
         items: number[],
-        setSelected: (value: number) => void
+        setSelected: (value: number) => void,
+        limit: number
     ) => {
-        const selectedItem = getSelectedItem(ref, items)
-        setSelected(selectedItem)
-    }
+        if (!ref.current) return;
+    
+        const currentScrollTop = ref.current.scrollTop;
+        const selectedItem = getSelectedItem(ref, items, limit);
+    
+        // Prevent upward scrolling past the limit
+        const closestIndex = Math.round(currentScrollTop / itemHeight) - 1;
+        if (isDateNow && items[closestIndex] < limit) {
+            ref.current.scrollTop = (limit + 1) * itemHeight// Snap back to the limit
+            return;
+        }
+    
+        setSelected(selectedItem);
+    };
 
     return (
             
@@ -66,11 +95,11 @@ const CustomTimePicker = ({
                     space-x-1
                 "
             >
-
+                {JSON.stringify({isDateNow})}
                 {/* Hours Wheel */}
                 <div
                     ref={hoursRef}
-                    onScroll={() => handleScroll(hoursRef, hours, setHour)}
+                    onScroll={() => handleScroll(hoursRef, hours, setHour, defaultHour)}
                     className="
                         relative 
                         w-8
@@ -123,7 +152,7 @@ const CustomTimePicker = ({
                 {/* Minutes Wheel */}
                 <div
                     ref={minutesRef}
-                    onScroll={() => handleScroll(minutesRef, minutes, setMinute)}
+                    onScroll={() => handleScroll(minutesRef, minutes, setMinute, defaultMinute)}
                     className="
                         relative 
                         w-8 

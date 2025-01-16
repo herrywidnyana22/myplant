@@ -23,13 +23,13 @@ const char *mqtt_topic_relay_mode = "myplant/keranmode";
 const char *mqtt_topic_device_mode = "myplant/devicemode";
 
 // Number of relays
-const int numberOfRelays = 12; // You can change this number to adjust the relay count
+const int numberOfRelays = 12;
 
 // Pin assignments for relays
 // 1-D22, 2-D23, 3-D5, 4-D18, 5-D21, 6-D19
 // 7-D27, 8-D14, 9-D26, 10-D04, 11-D19, 12-D33
 
-std::vector<int> relayPins = {22, 23, 5, 18, 21, 19, 27, 14, 26, 4, 32, 33};// Ensure this matches the number of relays
+std::vector<int> relayPins = {22, 23, 5, 18, 21, 19, 27, 14, 26, 4, 32, 33}; // Ensure this matches the number of relays
 
 // Relay states and runtimes
 
@@ -43,24 +43,24 @@ PubSubClient mqtt_client(espClient);
 Ticker relayTicker;
 
 // Variables for scheduling
-String deviceMode = "MANUAL"; // SCHEDULE | MANUAL
+String deviceMode = "MANUAL"; // SCHEDULED | MANUAL
 String startDate = "";
 String startTime = "";
 
 bool sequenceActive = false;
+bool isAlternate = true;                   // default nyala bergantian
 unsigned long nextRelayActivationTime = 0; // Variable to track when to activate the next relay
-unsigned long sequenceStartTime = 0;
+unsigned long scheduleModeStartTime = 0;
 
 std::vector<int>::size_type currentRelayIndex = 0;
-std::vector<int>::size_type sequenceDuration = 0;
+std::vector<int>::size_type nextDuration = 0;
 
-std::vector<int> relayOrder(numberOfRelays);
-std::vector<bool> relayIsActive(numberOfRelays, false);
+std::vector<int> relayOrder;
 
 // Function prototypes
 void connectToWiFi();
 void connectToMQTTBroker();
-void mqttCallback(char *topic, byte *payload, unsigned int length);
+void receivedMessage(char *topic, byte *payload, unsigned int length);
 void controlRelay(int relayID, String command, int duration);
 void publishRelayStatus();
 void publishRelayDuration();
@@ -68,7 +68,7 @@ void publishRelayRuntime();
 void initState();
 void scheduleRelays(String message);
 void activateNextRelay();
-void startSequence(unsigned long delayMillis);
+void startScheduleMode(unsigned long delayMillis);
 unsigned long parseDateTime(String date, String time);
 
 void setup()
@@ -77,14 +77,15 @@ void setup()
   espClient.setInsecure();
 
   // Initialize Relays
-  for (int pin : relayPins) {
+  for (int pin : relayPins)
+  {
     pinMode(pin, OUTPUT);
     digitalWrite(pin, HIGH); // HIGH = OFF
   }
 
   connectToWiFi();
   mqtt_client.setServer(mqtt_broker, mqtt_port);
-  mqtt_client.setCallback(mqttCallback);
+  mqtt_client.setCallback(receivedMessage);
   connectToMQTTBroker();
 
   initState();
@@ -100,12 +101,14 @@ void connectToWiFi()
     delay(500);
     Serial.print(".");
     timeout++;
-    if (timeout > 20) {  // Timeout after 10 seconds
+    if (timeout > 20)
+    { // Timeout after 10 seconds
       Serial.print("[TIME OUT]");
       break;
     }
   }
-  if (WiFi.status() == WL_CONNECTED) {
+  if (WiFi.status() == WL_CONNECTED)
+  {
     Serial.println("[CONNECTED]");
   }
 }
@@ -130,8 +133,7 @@ void connectToMQTTBroker()
   }
 }
 
-
-void mqttCallback(char *topic, byte *payload, unsigned int length)
+void receivedMessage(char *topic, byte *payload, unsigned int length)
 {
   String message;
   for (unsigned int i = 0; i < length; i++)
@@ -139,11 +141,14 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     message += (char)payload[i];
   }
 
-  Serial.println("Message received:");
+  Serial.println("Message Received");
+  Serial.println("======== START MSG =========");
   Serial.print("Topic: ");
   Serial.println(topic);
   Serial.print("Message: ");
   Serial.println(message);
+  Serial.println("======== END MSG =========");
+  Serial.println("==========================");
 
   if (String(topic) == mqtt_topic_web)
   {
@@ -201,7 +206,6 @@ void controlRelay(int relayID, String command, int duration)
   {
     // Turn on the specific relay
     digitalWrite(relayPins[relayID], LOW); // LOW = ON
-    // digitalWrite(ledPins[relayID], HIGH);
 
     if (relayState[relayID] != "RUNNING")
     {
@@ -214,9 +218,7 @@ void controlRelay(int relayID, String command, int duration)
   }
   else if (command == "PAUSED")
   {
-    // Turn off the specific relay without resetting runtime
     digitalWrite(relayPins[relayID], HIGH); // HIGH = OFF
-    // digitalWrite(ledPins[relayID], LOW);
 
     if (relayState[relayID] == "RUNNING")
     {
@@ -229,7 +231,6 @@ void controlRelay(int relayID, String command, int duration)
   {
     // Turn off the specific relay and reset its state
     digitalWrite(relayPins[relayID], HIGH); // HIGH = OFF
-    // digitalWrite(ledPins[relayID], LOW);
 
     relayState[relayID] = "OFF";
     relayRuntime[relayID] = 0; // Reset runtime
@@ -241,7 +242,7 @@ void controlRelay(int relayID, String command, int duration)
   initState();
 }
 
-void publishMessage(const char* topic, const char* dataType)
+void publishMessage(const char *topic, const char *dataType)
 {
   StaticJsonDocument<256> doc;
 
@@ -267,18 +268,18 @@ void publishMessage(const char* topic, const char* dataType)
     }
   }
 
-  uint8_t buffer[256];  // Change buffer type to uint8_t[]
+  uint8_t buffer[256]; // Change buffer type to uint8_t[]
   size_t len = serializeJson(doc, buffer, sizeof(buffer));
 
   // Publish the message with retain flag set to false
   bool success = mqtt_client.publish(topic, buffer, len, false); // false means no retain flag
 
   // Print the message and result to the serial monitor
-  Serial.print("Published to topic ");
-  Serial.print(topic);
-  Serial.println(": ");
-  Serial.println((char*)buffer);  // Convert the buffer back to char for printing
-  Serial.println(success ? "Publish status: Success" : "Publish status: Error");
+  // Serial.print("Published to topic ");
+  // Serial.print(topic);
+  // Serial.println(": ");
+  // Serial.println((char *)buffer); // Convert the buffer back to char for printing
+  // Serial.println(success ? "Publish status: Success" : "Publish status: Error");
 }
 
 // Publish relay status
@@ -299,8 +300,6 @@ void publishRelayRuntime()
   publishMessage(mqtt_topic_runtime, "runtime");
 }
 
-
-
 void publishModeStatus()
 {
   StaticJsonDocument<256> doc;
@@ -318,7 +317,7 @@ void publishModeStatus()
     doc["startTime"] = startTime; // Send startTime as is
   }
 
-  doc["duration"] = sequenceDuration / 60000; // Convert milliseconds to minutes
+  doc["duration"] = nextDuration / 60000; // Convert milliseconds to minutes
 
   char buffer[256];
   serializeJson(doc, buffer, sizeof(buffer));
@@ -337,15 +336,6 @@ void publishModeStatus()
   }
 }
 
-
-void initState()
-{
-  publishRelayStatus();
-  publishRelayDuration();
-  publishRelayRuntime();
-  publishModeStatus();
-}
-
 void scheduleRelays(String message)
 {
   StaticJsonDocument<256> doc;
@@ -359,35 +349,34 @@ void scheduleRelays(String message)
   }
 
   JsonArray order = doc["order"];
-  JsonArray isActive = doc["isActive"];
-  sequenceDuration = doc["nextDuration"].as<int>() * 60000;
+  nextDuration = doc["nextDuration"].as<int>() * 60000;
   startDate = doc["startDate"].as<String>();
   startTime = doc["startTime"].as<String>();
+  isAlternate = doc["isAlternate"].as<bool>();
+
+  // Immediate start in SCHEDULE mode
+  deviceMode = "SCHEDULE";
 
   // Update relay orders and active states
+  relayOrder.resize(order.size());
   for (int i = 0; i < order.size(); i++)
   {
     relayOrder[i] = order[i];
-    relayIsActive[i] = static_cast<bool>(isActive[i]);
   }
 
   if (startDate == "now" && startTime == "now")
   {
-    // Immediate start in SCHEDULE mode
-    deviceMode = "SCHEDULE";
     startSequence(0); // Start immediately
   }
   else
   {
-    // Future start; begin in MANUAL mode and set up a delayed start
-    deviceMode = "MANUAL";
-    sequenceStartTime = parseDateTime(startDate, startTime);
-    unsigned long delayMillis = sequenceStartTime - millis();
+    scheduleModeStartTime = parseDateTime(startDate, startTime);
+    unsigned long timeToScheduledDate = scheduleModeStartTime - millis();
 
-    if (delayMillis > 0)
+    if (timeToScheduledDate > 0)
     {
-      Serial.printf("Sequence scheduled to start in %lu ms\n", delayMillis);
-      startSequence(delayMillis);
+      Serial.printf("Sequence scheduled to start in %lu ms\n", timeToScheduledDate);
+      startSequence(timeToScheduledDate);
     }
     else
     {
@@ -397,6 +386,48 @@ void scheduleRelays(String message)
 
   // Publish initial mode status with the scheduled start time
   publishModeStatus();
+}
+
+void startSequence(unsigned long timeToScheduledDate)
+{
+  if (timeToScheduledDate > 0)
+  {
+    Serial.printf("Scheduling sequence to start in %lu milliseconds\n", timeToScheduledDate);
+    scheduleModeStartTime = millis() + timeToScheduledDate;
+    nextRelayActivationTime = scheduleModeStartTime;
+  }
+  else
+  {
+    Serial.println("Starting sequence immediately");
+    nextRelayActivationTime = millis();
+  }
+
+  sequenceActive = true;
+  currentRelayIndex = 0;
+}
+
+void activateNextRelay()
+{
+  if (!sequenceActive || currentRelayIndex >= relayOrder.size())
+  {
+    // End sequence, return to MANUAL mode
+    deviceMode = "MANUAL";
+    sequenceActive = false;
+    currentRelayIndex = 0;
+    startDate = "";
+    startTime = "";
+    isAlternate = true;
+    Serial.println("Relay sequence completed, switched to MANUAL mode");
+    return;
+  }
+
+  unsigned long currentMillis = millis();
+
+  if (currentMillis >= nextRelayActivationTime)
+  {
+    int relayID = relayOrder[currentRelayIndex];
+    controlRelay(relayID, "RUNNING", nextDuration / 60000); // Run the relay for the given duration
+  }
 }
 
 unsigned long parseDateTime(String date, String time)
@@ -409,61 +440,12 @@ unsigned long parseDateTime(String date, String time)
   return mktime(&t) * 1000; // Convert to milliseconds
 }
 
-void activateNextRelay()
+void initState()
 {
-  if (!sequenceActive || currentRelayIndex >= numberOfRelays)
-  {
-    // End sequence, return to MANUAL mode
-    deviceMode = "MANUAL";
-    sequenceActive = false;
-    currentRelayIndex = 0;
-    startDate = "";
-    startTime = "";
-    Serial.println("Relay sequence completed, switched to MANUAL mode");
-    return;
-  }
-
-  if (relayIsActive[currentRelayIndex])
-  {
-    int relayID = relayOrder[currentRelayIndex];
-    Serial.printf("Activating relay %d in sequence\n", relayID + 1);
-    controlRelay(relayID, "RUNNING", sequenceDuration / 60000); // Convert ms to min
-
-    // Schedule next relay activation if more are active
-    if (currentRelayIndex + 1 < numberOfRelays && relayIsActive[currentRelayIndex + 1])
-    {
-      relayTicker.attach_ms(sequenceDuration, activateNextRelay);
-    }
-    currentRelayIndex++; // Move to the next relay
-  }
-  else
-  {
-    currentRelayIndex++;
-    activateNextRelay(); // Skip to next if the current one is not active
-  }
-}
-
-void startSequence(unsigned long delayMillis)
-{
-  if (delayMillis > 0)
-  {
-    Serial.printf("Scheduling sequence to start in %lu milliseconds\n", delayMillis);
-    sequenceStartTime = millis() + delayMillis;
-    nextRelayActivationTime = sequenceStartTime;
-  }
-  else
-  {
-    Serial.println("Starting sequence immediately");
-    nextRelayActivationTime = millis();
-  }
-
-  sequenceActive = true;
-  currentRelayIndex = 0;
-
-  if (deviceMode == "MANUAL" && delayMillis == 0)
-  {
-    deviceMode = "SCHEDULE";
-  }
+  publishRelayStatus();
+  publishRelayDuration();
+  publishRelayRuntime();
+  publishModeStatus();
 }
 
 void loop()
@@ -474,6 +456,41 @@ void loop()
   }
   mqtt_client.loop();
 
+  // If the device is in scheduled mode, we need to activate the relays according to the schedule
+  if (deviceMode == "SCHEDULE" && sequenceActive)
+  {
+    unsigned long currentMillis = millis();
+
+    // Check if it's time to activate the next relay
+    if (currentMillis >= nextRelayActivationTime)
+    {
+      activateNextRelay(); // Activate the current relay
+
+      // Update the activation time for the next relay
+      if (isAlternate)
+      {
+        // If alternate mode, activate the next relay after the same duration
+        nextRelayActivationTime = currentMillis + nextDuration;
+      }
+      else
+      {
+        // If simultaneous mode, activate the next relay simultaneously after the duration
+        nextRelayActivationTime = currentMillis;
+      }
+
+      // Move to the next relay in the sequence
+      currentRelayIndex++;
+
+      // Check if we have activated all relays
+      if (currentRelayIndex >= relayOrder.size())
+      {
+        Serial.println("All relays have been activated.");
+        sequenceActive = false; // Stop the sequence
+      }
+    }
+  }
+
+  // Manage the relays' runtime and handle the auto-off feature based on the relay duration
   for (int i = 0; i < numberOfRelays; i++)
   {
     if (relayState[i] == "RUNNING")
@@ -487,28 +504,25 @@ void loop()
       }
     }
   }
+}
 
-  if (sequenceActive)
+void resetAllStates()
+{
+  // Reset relay states, durations, and runtime
+  for (int i = 0; i < numberOfRelays; i++)
   {
-    unsigned long currentMillis = millis();
-
-    // Check if it's time to activate the next relay
-    if (currentMillis >= nextRelayActivationTime)
-    {
-      activateNextRelay(); // Activate the current relay
-
-      // Update the activation time for the next relay
-      nextRelayActivationTime += relayIsActive[currentRelayIndex] ? sequenceDuration : 0; // Adjust for next relay activation time
-
-      // Move to the next relay in the sequence
-      currentRelayIndex++;
-
-      // Check if we have activated all relays
-      if (currentRelayIndex >= relayOrder.size())
-      {
-        Serial.println("All relays have been activated.");
-        sequenceActive = false; // Stop the sequence
-      }
-    }
+    relayState[i] = "OFF";
+    relayDuration[i] = 0;
+    relayRuntime[i] = 0;
+    lastMillis[i] = millis();
   }
+
+  // Reset other global variables
+  deviceMode = "MANUAL";
+  startDate = "";
+  startTime = "";
+  sequenceActive = false;
+  isAlternate = true; // Default to alternate mode
+  currentRelayIndex = 0;
+  nextRelayActivationTime = 0;
 }
