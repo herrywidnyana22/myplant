@@ -8,8 +8,10 @@
 #include <WiFiUdp.h>
 
 // WiFi and MQTT credentials
-const char *ssid = "GUDANG POJOK";
-const char *password = "gudang_pojok629";
+// const char *ssid = "GUDANG POJOK";
+// const char *password = "gudang_pojok629";
+const char *ssid = "TP-Link_0BA8";
+const char *password = "16275676";
 const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
 const int mqtt_port = 8883;
 const char *mqtt_username = "myplant";
@@ -34,11 +36,12 @@ const int numberOfRelays = 12;
 std::vector<int> relayPins = {22, 23, 5, 18, 21, 19, 27, 14, 26, 4, 32, 33}; // Ensure this matches the number of relays
 
 // Relay states and runtimes
-
 std::vector<String> relayState(numberOfRelays, "OFF");
 std::vector<unsigned long> relayDuration(numberOfRelays, 0);
 std::vector<unsigned long> relayRuntime(numberOfRelays, 0);
 std::vector<unsigned long> lastMillis(numberOfRelays, 0);
+
+unsigned long previousMillis = 0; // Last time the time was updated
 
 WiFiClientSecure espClient;
 PubSubClient mqtt_client(espClient);
@@ -52,12 +55,11 @@ String startDate = "";
 String startTime = "";
 
 bool sequenceActive = false;
-bool isAlternate = true;                   // default nyala bergantian
-unsigned long nextRelayActivationTime = 0; // Variable to track when to activate the next relay
-unsigned long scheduleModeStartTime = 0;
+bool isAlternate = true;            // default nyala bergantian
+time_t nextRelayActivationTime = 0; // Variable to track when to activate the next relay
 
 std::vector<int>::size_type currentRelayIndex = 0;
-std::vector<int>::size_type nextDuration = 0;
+std::vector<int>::size_type nextDuration = 0; // in minute
 
 std::vector<int> relayOrder;
 
@@ -74,13 +76,19 @@ void scheduleRelays(String message);
 void activateNextRelay();
 void startScheduleMode(unsigned long delayMillis);
 
-unsigned long currentEpochMillisAtBoot = 0;
-unsigned long parseDateTime(String date, String time);
+time_t parseScheduledTime(String date, String time);
 
 void setup()
 {
   Serial.begin(9600);
   espClient.setInsecure();
+
+  connectToWiFi();
+
+  mqtt_client.setServer(mqtt_broker, mqtt_port);
+  mqtt_client.setCallback(receivedMessage);
+
+  connectToMQTTBroker();
 
   // Initialize Relays
   for (int pin : relayPins)
@@ -89,24 +97,12 @@ void setup()
     digitalWrite(pin, HIGH); // HIGH = OFF
   }
 
-  connectToWiFi();
-
   // Start NTP client
   timeClient.begin();
   while (!timeClient.update())
   {
     timeClient.forceUpdate();
   }
-
-  // Initialize epoch time at boot
-  currentEpochMillisAtBoot = timeClient.getEpochTime() * 1000UL;
-
-  Serial.print("Current time synchronized: ");
-  Serial.println(currentTimeMillis()); // Prints current epoch in milliseconds
-
-  mqtt_client.setServer(mqtt_broker, mqtt_port);
-  mqtt_client.setCallback(receivedMessage);
-  connectToMQTTBroker();
 
   initState();
 }
@@ -325,8 +321,7 @@ void publishModeStatus()
   StaticJsonDocument<256> doc;
   doc["deviceMode"] = deviceMode;
 
-  // Check if startDate and startTime are "now"
-  if (startDate == "now" && startTime == "now")
+  if (startDate == "now" && startTime == "now") // Check if startDate and startTime are "now"
   {
     doc["startDate"] = "now"; // Send "now" as a string
     doc["startTime"] = "now"; // Include startTime as well
@@ -337,7 +332,7 @@ void publishModeStatus()
     doc["startTime"] = startTime; // Send startTime as is
   }
 
-  doc["duration"] = nextDuration / 60000; // Convert milliseconds to minutes
+  doc["duration"] = nextDuration;
 
   char buffer[256];
   serializeJson(doc, buffer, sizeof(buffer));
@@ -370,13 +365,12 @@ void scheduleRelays(String message)
 
   // Example message format: {"order":[1,2,3], "nextDuration": 600, "startDate": "2025-01-18", "startTime": "10:00"}
   JsonArray order = doc["order"];
-  nextDuration = doc["nextDuration"].as<int>() * 60000;
+  nextDuration = doc["nextDuration"].as<int>();
   startDate = doc["startDate"].as<String>();
   startTime = doc["startTime"].as<String>();
   isAlternate = doc["isAlternate"].as<bool>();
 
-  // Immediate start in SCHEDULE mode
-  deviceMode = "SCHEDULE";
+  deviceMode = "SCHEDULE"; // Immediate start in SCHEDULE mode
 
   // Update relay orders and active states
   relayOrder.resize(order.size());
@@ -387,48 +381,20 @@ void scheduleRelays(String message)
 
   if (startDate == "now" && startTime == "now")
   {
-    startSequence(0); // Start immediately
+    Serial.println("Starting sequence : NOW");
+    nextRelayActivationTime = getCurrentTime();
   }
   else
   {
-    scheduleModeStartTime = parseDateTime(startDate, startTime);
-    // CURRENT DATETIME > DATETIME SCHEDULED (in FUTURE)
-    unsigned long timeToScheduledDate = scheduleModeStartTime - currentTimeMillis();
+    nextRelayActivationTime = getScheduleTime();
 
-    Serial.printf("PARSED DATE : %lu ms\n", scheduleModeStartTime);
-    Serial.printf("MILIS : %lu ms\n", millis());
-    Serial.printf("CURRENT MILIS : %lu ms\n", currentTimeMillis());
-    Serial.printf("TIME TO SCHEDULE : %lu ms\n", timeToScheduledDate);
-
-    Serial.printf("Sequence scheduled to start in %lu ms\n", timeToScheduledDate);
-    startSequence(scheduleModeStartTime);
+    Serial.printf("Starting sequence : %s, StartDate: %s, StartTime: %s, NextDuration: %d\n",
+                  deviceMode.c_str(), startDate.c_str(), startTime.c_str(), nextDuration);
   }
-
-  // Publish initial mode status with the scheduled start time
-  publishModeStatus();
-}
-
-void startSequence(unsigned long timeToScheduledDate)
-{
-  if (timeToScheduledDate > 0)
-  {
-    if (timeToScheduledDate >= currentTimeMillis())
-    {
-      Serial.println("TRIGGERED : timeToScheduledDate > 0");
-      scheduleModeStartTime = timeToScheduledDate + nextDuration;
-      nextRelayActivationTime = scheduleModeStartTime;
-    }
-  }
-  else
-  {
-    Serial.println("Starting sequence immediately");
-    Serial.printf("NEXT RELAY ACTIVATION TIME in %lu ms\n", nextRelayActivationTime);
-    nextRelayActivationTime = currentTimeMillis();
-  }
-
-  Serial.println("TRIGGERED : timeToScheduledDate > 0");
+  Serial.println("SEQUENCE MODE IS ON");
   sequenceActive = true;
   currentRelayIndex = 0;
+  publishModeStatus(); // Publish initial mode status with the scheduled start time
 }
 
 void activateNextRelay()
@@ -442,37 +408,44 @@ void activateNextRelay()
     return;
   }
 
-  if (currentTimeMillis() <= nextRelayActivationTime)
-  {
-    int relayID = relayOrder[currentRelayIndex];
-    controlRelay(relayID, "RUNNING", nextDuration / 60000); // Run the relay for the given duration
-  }
+  int relayID = relayOrder[currentRelayIndex];
+  controlRelay(relayID, "RUNNING", nextDuration); // Run the relay for the given duration
+
+  currentRelayIndex++; // Move to the next relay in the sequence
 }
 
-unsigned long parseDateTime(String date, String time)
-{
-  int year = date.substring(0, 4).toInt();
-  int month = date.substring(5, 7).toInt();
-  int day = date.substring(8, 10).toInt();
+time_t parseScheduledTime(String date, String time)
+{ // Parse Scheduled Date and Time into Epoch Time
+  tm timeStruct;
 
-  int hour = time.substring(0, 2).toInt();
-  int minute = time.substring(3, 5).toInt();
+  // Parse date (e.g., "2025-01-18")
+  timeStruct.tm_year = date.substring(0, 4).toInt() - 1900; // Year
+  timeStruct.tm_mon = date.substring(5, 7).toInt() - 1;     // Month (0-11)
+  timeStruct.tm_mday = date.substring(8, 10).toInt();       // Day
 
-  tmElements_t tm;
-  tm.Year = year - 1970;
-  tm.Month = month;
-  tm.Day = day;
-  tm.Hour = hour;
-  tm.Minute = minute;
-  tm.Second = 0;
+  // Parse time (e.g., "05:40")
+  timeStruct.tm_hour = time.substring(0, 2).toInt(); // Hour
+  timeStruct.tm_min = time.substring(3, 5).toInt();  // Minute
+  timeStruct.tm_sec = 0;                             // Seconds (default to 0)
 
-  return makeTime(tm);
+  return mktime(&timeStruct);
 }
 
-// Calculate absolute current time in epoch milliseconds
-unsigned long currentTimeMillis()
+time_t getCurrentTime()
 {
-  return millis() + currentEpochMillisAtBoot;
+
+  timeClient.update();                    // Update time
+  time_t now = timeClient.getEpochTime(); // Get current time
+
+  return now;
+}
+
+time_t getScheduleTime()
+{
+  timeClient.update();                                              // Update time
+  time_t scheduledEpoch = parseScheduledTime(startDate, startTime); // Get current time
+
+  return scheduledEpoch;
 }
 
 void initState()
@@ -491,32 +464,24 @@ void loop()
   }
   mqtt_client.loop();
 
-  // If the device is in scheduled mode, we need to activate the relays according to the schedule
-  if (deviceMode == "SCHEDULE" && sequenceActive)
+  if (deviceMode == "SCHEDULE" && sequenceActive) // If the device is in scheduled mode, we need to activate the relays according to the schedule
   {
 
-    // Check if it's time to activate the next relay
-    if (currentTimeMillis() >= nextRelayActivationTime)
+    if (getCurrentTime() >= nextRelayActivationTime) // Check if it's time to activate the next relay
     {
       activateNextRelay(); // Activate the current relay
 
-      // Update the activation time for the next relay
-      if (isAlternate)
+      if (isAlternate) // Update the activation time for the next relay
       {
         // If alternate mode, activate the next relay after the same duration
-        nextRelayActivationTime = currentTimeMillis() + nextDuration;
+        nextRelayActivationTime = getCurrentTime() + (nextDuration * 60); // minute to seconds
       }
       else
       {
-        // If simultaneous mode, activate the next relay simultaneously after the duration
-        nextRelayActivationTime = currentTimeMillis();
+        nextRelayActivationTime = getCurrentTime(); // If simultaneous mode, activate the next relay simultaneously after the duration
       }
 
-      // Move to the next relay in the sequence
-      currentRelayIndex++;
-
-      // Check if we have activated all relays
-      if (currentRelayIndex >= relayOrder.size())
+      if (currentRelayIndex >= relayOrder.size()) // Check if we have activated all relays
       {
         Serial.println("All relays have been activated.");
         sequenceActive = false; // Stop the sequence
@@ -524,8 +489,7 @@ void loop()
     }
   }
 
-  // Manage the relays' runtime and handle the auto-off feature based on the relay duration
-  for (int i = 0; i < numberOfRelays; i++)
+  for (int i = 0; i < numberOfRelays; i++) // Manage the relays' runtime and handle the auto-off feature based on the relay duration
   {
     if (relayState[i] == "RUNNING")
     {
@@ -538,22 +502,10 @@ void loop()
       }
     }
   }
-
-  Serial.printf("NEXT RELAY ACTIVATION TIME in %lu ms\n", nextRelayActivationTime);
 }
 
-void resetAllStates()
+void resetAllStates() /// Reset other global variables
 {
-  // Reset relay states, durations, and runtime
-  for (int i = 0; i < numberOfRelays; i++)
-  {
-    relayState[i] = "OFF";
-    relayDuration[i] = 0;
-    relayRuntime[i] = 0;
-    lastMillis[i] = millis();
-  }
-
-  // Reset other global variables
   deviceMode = "MANUAL";
   startDate = "";
   startTime = "";

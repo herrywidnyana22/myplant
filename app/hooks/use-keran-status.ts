@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useMqtt } from '../context/MqttContex';
-import { KeranStatusProps } from '../types/KeranStatusType';
+import { DeviceModeProps, KeranStatusProps } from '../types/KeranStatusType';
 import { toast } from 'sonner';
 
-export type RelayStatusProps = {
+export type KeranDataProps = {
     id:string
     name: string
     duration: number
     runtime: number
-    isScheduled: boolean
     isAlternate: boolean //menyala bergantian
+    isBooked: boolean
 } & KeranStatusProps
 
 type StatusMessageProps = {
     name: string
 } & KeranStatusProps
+
 
 type DurationMessageProps = {
     name: string
@@ -26,16 +27,19 @@ type RuntimeMessageProps = {
     runtime: number
 }
 
-export const UseKeranStatus = () => {
-    const [combineStatus, setCombineStatus] = useState<RelayStatusProps[]>([]);
-    const [statusMsg, setStatusMsg] = useState<StatusMessageProps[]>([]);
-    const [durationMsg, setDurationMsg] = useState<DurationMessageProps[]>([]);
-    const [runtimeMsg, setRuntimeMsg] = useState<RuntimeMessageProps[]>([]);
+const TOPICS = ['myplant/status', 'myplant/duration', 'myplant/runtime', 'myplant/devicemode']
+
+export const useKeranStatus = () => {
+    const [combineStatus, setCombineStatus] = useState<KeranDataProps[]>([])
+    const [statusMsg, setStatusMsg] = useState<StatusMessageProps[]>([])
+    const [durationMsg, setDurationMsg] = useState<DurationMessageProps[]>([])
+    const [runtimeMsg, setRuntimeMsg] = useState<RuntimeMessageProps[]>([])
+    const [deviceModeMsg, setDeviceModeMsg] = useState<DeviceModeProps[]>([])
     
     // Flags to track if data from each topic has been received
-    const [statusReceived, setStatusReceived] = useState(false);
-    const [durationReceived, setDurationReceived] = useState(false);
-    const [runtimeReceived, setRuntimeReceived] = useState(false);
+    const [statusReceived, setStatusReceived] = useState(false)
+    const [durationReceived, setDurationReceived] = useState(false)
+    const [runtimeReceived, setRuntimeReceived] = useState(false)
 
     const { client } = useMqtt()
 
@@ -49,104 +53,107 @@ export const UseKeranStatus = () => {
                 id: `keran${i}`,
                 duration: item2 ? item2.duration : 0,
                 runtime: item3 ? item3.runtime : 0,
-                isScheduled: false,
-                isAlternate: true
+                isAlternate: true,
+                isBooked: false
             }
         })
 
         setCombineStatus(combined)
     }
 
+
+    // Handle messages from the subscribed topics
+    const handleMessage = (topic: string, message: Buffer) => {
+        console.log("Topic:", topic);
+        console.log("Message:", message.toString())
+
+        try {
+            const parsedMessage = JSON.parse(message.toString())
+
+            if (topic === 'myplant/status') { //{"1":"OFF","2":"OFF","3":"OFF","4":"OFF","5":"OFF","6":"OFF","7":"OFF","8":"OFF","9":"OFF","10":"OFF","11":"OFF","12":"OFF"}
+                
+                const statusArray: StatusMessageProps[] = Object.entries(parsedMessage).map(
+                    ([key, value]) => ({
+                        name: `keran${key}`,
+                        status: value as KeranStatusProps['status'],
+                    })
+                )
+
+                setStatusMsg(statusArray)
+                setStatusReceived(true)
+                
+            } else if (topic === 'myplant/duration') { //{"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0}
+                const durationArray: DurationMessageProps[] = Object.entries(parsedMessage).map(
+                    ([key, value]) => ({
+                        name: `keran${key}`,
+                        duration: value as number,
+                    })
+                )
+
+                setDurationMsg(durationArray)
+                setDurationReceived(true)
+
+            } else if (topic === 'myplant/runtime') { //{"1":0,"2":0,"3":0,"4":0,"5":0,"6":59132,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0}
+                
+                const runtimeArray: RuntimeMessageProps[] = Object.entries(parsedMessage).map(
+                    ([key, value]) => ({
+                        name: `keran${key}`,
+                        runtime: value as number,
+                    })
+                )
+                setRuntimeMsg(runtimeArray)
+                setRuntimeReceived(true)
+            
+            } else if (topic === 'myplant/devicemode') { //{"mode":"MANUAL","date":"","time":"","duration":0,"booked":[]}
+                if (
+                    typeof parsedMessage.mode === 'string' &&
+                    (parsedMessage.mode === 'MANUAL' || parsedMessage.mode === 'SCHEDULE')
+                ) {
+                    setDeviceModeMsg(() => [
+                        {
+                            mode: parsedMessage.mode,
+                            startDate: parsedMessage.date || '', // Use `date` for `startDate`
+                            startTime: parsedMessage.time || '', // Use `time` for `startTime`
+                            booked: parsedMessage.booked || [],  // Ensure `booked` is an array
+                        },
+                    ])
+                } else {
+                    console.error('Invalid deviceMode message:', parsedMessage);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to parse MQTT runtime message:', error)
+        }
+    }
+
     useEffect(() => {
         if (client) {
-            // Subscribe to the topics
-            client.subscribe('myplant/status', (err) => {
+        
+            TOPICS.forEach((topic) => {
+                client.subscribe(topic, (err) => {
                 if (err) {
-                    toast.error('Failed to subscribe to relay status')
+                    toast.error(`Failed to subscribe to ${topic}`);
                 }
-            });
+                })
+            })
 
-            client.subscribe('myplant/duration', (err) => {
-                if (err) {
-                    console.error('Failed to subscribe to relay duration:', err)
-                }
-            });
+            client.on('message', handleMessage);
 
-            client.subscribe('myplant/runtime', (err) => {
-                if (err) {
-                    console.error('Failed to subscribe to relay runtime:', err)
-                }
-            });
-
-            // Handle messages from the subscribed topics
-            client.on('message', (topic: string, message: Buffer) => {
-                console.log("Topic:", topic);
-                console.log("Message:", message.toString())
-
-                const parsedMessage = JSON.parse(message.toString())
-
-                if (topic === 'myplant/status') {
-                    try {
-                        const statusArray: StatusMessageProps[] = Object.entries(parsedMessage).map(
-                            ([key, value]) => ({
-                                name: `keran${key}`,
-                                status: value as KeranStatusProps['status'],
-                            })
-                        )
-
-                        setStatusMsg(statusArray)
-                        setStatusReceived(true)
-                    } catch (error) {
-                        console.error('Failed to parse MQTT status message:', error)
-                    }
-                } else if (topic === 'myplant/duration') {
-                    try {
-                        const durationArray: DurationMessageProps[] = Object.entries(parsedMessage).map(
-                            ([key, value]) => ({
-                                name: `keran${key}`,
-                                duration: value as number,
-                            })
-                        )
-
-                        setDurationMsg(durationArray)
-                        setDurationReceived(true)
-                    } catch (error) {
-                        console.error('Failed to parse MQTT duration message:', error)
-                    }
-                } else if (topic === 'myplant/runtime') {
-                    try {
-                        const runtimeArray: RuntimeMessageProps[] = Object.entries(parsedMessage).map(
-                            ([key, value]) => ({
-                                name: `keran${key}`,
-                                runtime: value as number,
-                            })
-                        )
-                        setRuntimeMsg(runtimeArray)
-                        setRuntimeReceived(true)
-                    } catch (error) {
-                        console.error('Failed to parse MQTT runtime message:', error)
-                    }
-                }
-            });
-            const topic = 'myplant/web'
-            const msg = 'init'
-            
-            client.publish(topic, msg)
-            
+            // Publish initialization message
+            client.publish('myplant/web', 'init');
         }
     }, [client])
 
-    
     useEffect(() => {
         if (statusReceived && durationReceived && runtimeReceived) {
             formatRelayStatus()
 
             // Reset
-            setStatusReceived(false);
-            setDurationReceived(false);
-            setRuntimeReceived(false);
+            setStatusReceived(false)
+            setDurationReceived(false)
+            setRuntimeReceived(false)
         }
-    }, [statusReceived, durationReceived, runtimeReceived]);
+    }, [statusReceived, durationReceived, runtimeReceived])
 
-    return combineStatus;
-};
+    return { combineStatus, deviceModeMsg }
+}

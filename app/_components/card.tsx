@@ -5,7 +5,7 @@ import { useMqtt } from "../context/MqttContex"
 import { ConnectionStatus } from './connection-status';
 import { CardItem } from './card-item';
 import { formatCapitalize } from '../utils/format-capitalize';
-import { UseKeranStatus } from '../hooks/use-keran-status';
+import { useKeranStatus } from '../hooks/use-keran-status';
 import { CalendarClock, Clock, Layers, Play, Settings, SquareStack } from 'lucide-react';
 import { Hint } from './hint';
 import { PopoverSpecialMode } from './popover-special-mode';
@@ -13,37 +13,43 @@ import { cn } from '@/lib/utils';
 import { DynamicIsland } from './dynamic-island';
 
 export const Card = () => {
-    const data = UseKeranStatus()
+     const { combineStatus, deviceModeMsg } = useKeranStatus()
     const { connectStatus,setConnectStatus } = useMqtt()
     
-    const [keranData, setKeranData] = useState(data)
+    const [keranData, setKeranData] = useState(combineStatus)
     const [isCollapse, setIsCollapse] = useState(false)
     const [isSpesialMode, setIsSpesialMode] = useState(false)
     const [dateLabel, setDateLabel] = useState<string | null>(null)
     const [durationLabel, setDurationLabel] = useState<string | null>(null)
-    const [runningNames , setRunningNames] = useState<string>("")
-    
+    const [runningNames, setRunningNames] = useState<string>("")
+    const [mode,setMode] = useState(deviceModeMsg)
+    const [numOfRunning,setNumOfRunning] = useState(0)
 
     useEffect(() => {
-        setKeranData(data);
+        setKeranData(combineStatus);
+        setMode(deviceModeMsg);
         
-        if (!data || data.length === 0 ){
+        if (!combineStatus || combineStatus.length === 0 ){
             setConnectStatus("DEVICE DISCONNECTED")
         } else {
             setConnectStatus("DEVICE CONNECTED")
         }
 
-        const runningKeran= data
+        const runningKeran= combineStatus
             .filter(item => item.status === "RUNNING")
             .map(item => item.name)
             .join(", ")
 
-        setRunningNames(runningKeran)
+        const runningKeranCount = combineStatus.filter(item => item.status === "RUNNING").length;
 
-    }, [data, setConnectStatus])
+        setRunningNames(runningKeran)
+        setNumOfRunning(runningKeranCount)
+
+    }, [combineStatus, deviceModeMsg])
 
 
     console.log({keranData})
+    console.log({mode})
     
     return ( 
         <div
@@ -101,7 +107,7 @@ export const Card = () => {
                     )}
                     {
                         runningNames !== "" &&
-                        <Hint label={`ON: ${runningNames}`}>
+                        <Hint label={`${numOfRunning} ON: ${runningNames}`}>
                             <span className='flex gap-2'>
                                 <Play className='size-4 flex-shrink-0' />
                                 <p className='truncate'>{runningNames}</p>
@@ -191,7 +197,7 @@ export const Card = () => {
                                     label={formatCapitalize(item.name)}
                                     status={item.status}
                                     duration={item.duration}
-                                    mode={item.duration > 0 ? "TIMER" : "NO TIMER"}
+                                    durationMode={item.duration > 0 ? "TIMER" : "NO TIMER"}
                                     time={item.runtime}
                                     collapse={isCollapse}
                                 />

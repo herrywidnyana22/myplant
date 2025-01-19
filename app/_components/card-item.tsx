@@ -20,7 +20,7 @@ import { ControlButtonGroup } from "./control-button-group";
 export type CardItemProps={
     id:number
     label: string
-    mode: "TIMER" | "NO TIMER"
+    durationMode: "TIMER" | "NO TIMER"
     duration: number
     time: number
     collapse?: boolean
@@ -30,7 +30,7 @@ export const CardItem = ({
     id,
     duration,
     label,
-    mode,
+    durationMode,
     status,
     time,
     collapse,
@@ -39,7 +39,7 @@ export const CardItem = ({
     const isNewDuration = !durationOptionData.some(option => option.duration === duration);
     
     const { publishMessage } = usePublish()
-    const [onMode, setOnMode] = useState(mode)
+    const [onMode, setOnMode] = useState(durationMode)
     const [onStatus, setOnStatus] = useState(status)
     
     const [onDuration, setOnDuration] = useState(duration)
@@ -54,10 +54,10 @@ export const CardItem = ({
     )
 
     // Ref to store the previous onMode
-    const prevModeRef = useRef(mode)
+    const prevModeRef = useRef(durationMode)
 
     const onSwitchChange = async() =>{
-        const modeValue:CardItemProps['mode'] = onMode === "TIMER" ? "NO TIMER" : "TIMER"
+        const modeValue:CardItemProps['durationMode'] = onMode === "TIMER" ? "NO TIMER" : "TIMER"
         
         if(onStatus === "RUNNING"){
             const isOk = await confirm()
@@ -108,10 +108,10 @@ export const CardItem = ({
 
     // Update local state whenever props change
     useEffect(() => {
-        setOnMode(mode)
+        setOnMode(durationMode)
         setOnDuration(duration)
         setOnStatus(status)
-    }, [mode, status, duration])
+    }, [durationMode, status, duration])
 
     useEffect(() => {
         if (prevModeRef.current === "TIMER" && onStatus === "OFF") {
