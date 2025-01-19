@@ -62,6 +62,7 @@ std::vector<int>::size_type currentRelayIndex = 0;
 std::vector<int>::size_type nextDuration = 0; // in minute
 
 std::vector<int> relayOrder;
+std::vector<int> bookedRelay;
 
 // Function prototypes
 void connectToWiFi();
@@ -157,14 +158,7 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
     message += (char)payload[i];
   }
 
-  Serial.println("Message Received");
-  Serial.println("======== START MSG =========");
-  Serial.print("Topic: ");
-  Serial.println(topic);
-  Serial.print("Message: ");
-  Serial.println(message);
-  Serial.println("======== END MSG =========");
-  Serial.println("==========================");
+  Serial.printf("Received %d : %d \n", topic, message);
 
   if (String(topic) == mqtt_topic_web)
   {
@@ -230,7 +224,6 @@ void controlRelay(int relayID, String command, int duration)
     }
 
     relayDuration[relayID] = duration == 0 ? 0 : duration * 60000UL; // Convert to ms if not indefinite
-    Serial.printf("Relay %d set to RUNNING with duration %d ms\n", relayID + 1, relayDuration[relayID]);
   }
   else if (command == "PAUSED")
   {
@@ -241,7 +234,6 @@ void controlRelay(int relayID, String command, int duration)
       relayState[relayID] = "PAUSED";
       relayRuntime[relayID] = millis() - lastMillis[relayID]; // Capture runtime at pause
     }
-    Serial.printf("Relay %d paused\n", relayID + 1);
   }
   else if (command == "OFF")
   {
@@ -252,7 +244,6 @@ void controlRelay(int relayID, String command, int duration)
     relayRuntime[relayID] = 0; // Reset runtime
     relayDuration[relayID] = 0;
     lastMillis[relayID] = millis(); // Reset start time
-    Serial.printf("Relay %d turned OFF\n", relayID + 1);
   }
 
   initState();
@@ -291,11 +282,10 @@ void publishMessage(const char *topic, const char *dataType)
   bool success = mqtt_client.publish(topic, buffer, len, false); // false means no retain flag
 
   // Print the message and result to the serial monitor
-  // Serial.print("Published to topic ");
-  // Serial.print(topic);
-  // Serial.println(": ");
-  // Serial.println((char *)buffer); // Convert the buffer back to char for printing
-  // Serial.println(success ? "Publish status: Success" : "Publish status: Error");
+  Serial.print("Published ");
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.println(success ? "Success" : " Error");
 }
 
 // Publish relay status
@@ -319,36 +309,31 @@ void publishRelayRuntime()
 void publishModeStatus()
 {
   StaticJsonDocument<256> doc;
-  doc["deviceMode"] = deviceMode;
+  doc["mode"] = deviceMode;
 
   if (startDate == "now" && startTime == "now") // Check if startDate and startTime are "now"
   {
-    doc["startDate"] = "now"; // Send "now" as a string
-    doc["startTime"] = "now"; // Include startTime as well
+    doc["date"] = "now"; // Send "now" as a string
+    doc["time"] = "now"; // Include startTime as well
   }
   else
   {
-    doc["startDate"] = startDate; // Send startDate as is
-    doc["startTime"] = startTime; // Send startTime as is
+    doc["date"] = startDate; // Send startDate as is
+    doc["time"] = startTime; // Send startTime as is
   }
 
   doc["duration"] = nextDuration;
 
+  // Add bookedRelay as a JSON array
+  JsonArray bookedArray = doc.createNestedArray("booked");
+  for (int relay : bookedRelay)
+  {
+    bookedArray.add(relay);
+  }
+
   char buffer[256];
   serializeJson(doc, buffer, sizeof(buffer));
   bool success = mqtt_client.publish(mqtt_topic_device_mode, buffer);
-
-  // Print the message and result to the serial monitor
-  // Serial.println("Published schedule status: ");
-  // Serial.println(buffer);
-  // if (success){
-  //   Serial.println("Publish status: Success");
-  // }else{
-  //   Serial.println("Publish status: Error");
-  // }
-
-  Serial.printf("Publishing mode: %s, StartDate: %s, StartTime: %s, NextDuration: %d\n",
-                deviceMode.c_str(), startDate.c_str(), startTime.c_str(), nextDuration);
 }
 
 void scheduleRelays(String message)
@@ -374,9 +359,12 @@ void scheduleRelays(String message)
 
   // Update relay orders and active states
   relayOrder.resize(order.size());
+  bookedRelay.resize(order.size());
+
   for (int i = 0; i < order.size(); i++)
   {
     relayOrder[i] = order[i];
+    bookedRelay[i] = order[i];
   }
 
   if (startDate == "now" && startTime == "now")
@@ -387,11 +375,8 @@ void scheduleRelays(String message)
   else
   {
     nextRelayActivationTime = getScheduleTime();
-
-    Serial.printf("Starting sequence : %s, StartDate: %s, StartTime: %s, NextDuration: %d\n",
-                  deviceMode.c_str(), startDate.c_str(), startTime.c_str(), nextDuration);
   }
-  Serial.println("SEQUENCE MODE IS ON");
+
   sequenceActive = true;
   currentRelayIndex = 0;
   publishModeStatus(); // Publish initial mode status with the scheduled start time
@@ -411,7 +396,22 @@ void activateNextRelay()
   int relayID = relayOrder[currentRelayIndex];
   controlRelay(relayID, "RUNNING", nextDuration); // Run the relay for the given duration
 
+  // remove booked/schedule relay
+  removeBookedRelay(bookedRelay);
+
   currentRelayIndex++; // Move to the next relay in the sequence
+}
+
+void removeBookedRelay(std::vector<int> &relayList)
+{
+  if (!relayList.empty())
+  {
+    relayList.erase(relayList.begin()); // Remove the first element
+  }
+  else
+  {
+    Serial.println("Relay list is empty! Nothing to remove.");
+  }
 }
 
 time_t parseScheduledTime(String date, String time)
