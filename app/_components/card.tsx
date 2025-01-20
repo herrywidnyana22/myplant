@@ -11,9 +11,12 @@ import { Hint } from './hint';
 import { PopoverSpecialMode } from './popover-special-mode';
 import { cn } from '@/lib/utils';
 import { DynamicIsland } from './dynamic-island';
+import { useConfirm } from '../hooks/use-confirm';
+import { usePublish } from '../hooks/use-publish';
+import { KeranStatusProps } from '../types/KeranStatusType';
 
 export const Card = () => {
-     const { combineStatus, deviceModeMsg } = useKeranStatus()
+    const { combineStatus, deviceModeMsg } = useKeranStatus()
     const { connectStatus,setConnectStatus } = useMqtt()
     
     const [keranData, setKeranData] = useState(combineStatus)
@@ -22,12 +25,17 @@ export const Card = () => {
     const [dateLabel, setDateLabel] = useState<string | null>(null)
     const [durationLabel, setDurationLabel] = useState<string | null>(null)
     const [runningNames, setRunningNames] = useState<string>("")
-    const [mode,setMode] = useState(deviceModeMsg)
     const [numOfRunning,setNumOfRunning] = useState(0)
 
+    const { publishMessage } = usePublish()
+
+    const [ConfirmSwitched, confirm] = useConfirm(
+        `Yakin ingin mengubah mode?`,
+        "Ini akan mematikan semua keran terlebih dahulu"
+    )
+
     useEffect(() => {
-        setKeranData(combineStatus);
-        setMode(deviceModeMsg);
+        setKeranData(combineStatus)
         
         if (!combineStatus || combineStatus.length === 0 ){
             setConnectStatus("DEVICE DISCONNECTED")
@@ -45,13 +53,79 @@ export const Card = () => {
         setRunningNames(runningKeran)
         setNumOfRunning(runningKeranCount)
 
-    }, [combineStatus, deviceModeMsg])
+    }, [combineStatus, setConnectStatus])
 
+    useEffect(() => {
+        if (!deviceModeMsg || deviceModeMsg.length === 0) {
+            setDateLabel(null)
+            setDurationLabel(null)
+            return
+        }
+
+        const { startDate, startTime, duration } = deviceModeMsg[0]
+    
+        // Check if startDate and startTime are "now"
+        const label = () => { 
+            if (!startDate) return null
+            
+            if (startDate === "now" && startTime === "now")
+            {
+                return "now"
+            } else {
+                return `${startDate} ${startTime}`
+            } 
+        }
+
+        const durasiLabel = duration === 0 ? null : `${duration} minute`
+    
+        setDateLabel(label)
+        setDurationLabel(durasiLabel)
+      }, [deviceModeMsg])
+
+    const handleSettingsClick = async () => {
+        
+         // Get active keran data
+        const activeKeran = keranData
+                            .filter((keran) => keran.status === "RUNNING")
+                            .map((keran) => {
+                                const match = keran.id.match(/\d+/)
+                                return match ? Number(match[0]) : null
+                            })
+        if (activeKeran.length === 0 || activeKeran === null){
+            setIsSpesialMode(true)
+        }else{
+            // Show confirmation dialog
+            const isOk = await confirm()
+            if (isOk) {
+                // turn off all active keran
+                controlKeran("OFF", activeKeran, 0)
+                
+                // Show popover
+                setIsSpesialMode(true)
+            }
+        }
+    }
+
+    const controlKeran = (action: KeranStatusProps["status"], data: (number | null)[], duration: number) => {
+    
+        const topic = 'myplant/bulkcontrol'
+        
+        const msgSuccess =`Semua keran berhasil di-OFF kan...`
+        const msgError =`Semua keran GAGAL di-OFF kan...`
+
+        const msg = JSON.stringify({
+                        listKeran: data,
+                        status: action,
+                        duration
+                    })
+        
+        publishMessage({topic, msg, msgSuccess, msgError})
+    }
 
     console.log({keranData})
-    console.log({mode})
-    
+    console.log({deviceModeMsg})
     return ( 
+    <>
         <div
             className="
                 relative
@@ -123,7 +197,6 @@ export const Card = () => {
                         gap-4
                     "
                 >
-                    
                 {
                     keranData.length > 0 &&
                     <div 
@@ -156,12 +229,11 @@ export const Card = () => {
                     connectStatus === "DEVICE CONNECTED" &&
                     <PopoverSpecialMode 
                         data={keranData}
-                        isSpesialMode={isSpesialMode}
-                        setIsSpesialMode={setIsSpesialMode}
-                        setDateLabel ={setDateLabel}
-                        setDurationLabel ={setDurationLabel}
+                        open={isSpesialMode}
+                        onOpenChange={(open) => setIsSpesialMode(open)}
                     >
                         <Settings 
+                            onClick={handleSettingsClick}
                             className='
                                 size-5 
                                 cursor-pointer 
@@ -200,6 +272,9 @@ export const Card = () => {
                                     durationMode={item.duration > 0 ? "TIMER" : "NO TIMER"}
                                     time={item.runtime}
                                     collapse={isCollapse}
+                                    dateLabel={dateLabel}
+                                    durationLabel={durationLabel}
+                                    disabled={deviceModeMsg[0]?.booked.includes(i)}
                                 />
                             ))
                         }
@@ -207,5 +282,7 @@ export const Card = () => {
                 ) : <p className='text-center text-slate-400 italic'>Device disconnected</p>
             }
         </div>
+        <ConfirmSwitched/>
+    </>
     );
 }

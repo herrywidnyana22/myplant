@@ -8,7 +8,7 @@ type UsePublishProps = {
     msgError: string
 };
 
-export const usePublish = () => {
+export const  usePublish = () => {
     const { client } = useMqtt()
     
     const publishMessage = ({ topic, msg, msgSuccess, msgError }: UsePublishProps) => {

@@ -115,6 +115,7 @@ export const useKeranStatus = () => {
                             startDate: parsedMessage.date || '', // Use `date` for `startDate`
                             startTime: parsedMessage.time || '', // Use `time` for `startTime`
                             booked: parsedMessage.booked || [],  // Ensure `booked` is an array
+                            duration: parsedMessage.duration || 0 // duration
                         },
                     ])
                 } else {

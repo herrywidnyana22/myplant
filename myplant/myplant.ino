@@ -8,23 +8,24 @@
 #include <WiFiUdp.h>
 
 // WiFi and MQTT credentials
-// const char *ssid = "GUDANG POJOK";
-// const char *password = "gudang_pojok629";
-const char *ssid = "TP-Link_0BA8";
-const char *password = "16275676";
+const char *ssid = "GUDANG POJOK";
+const char *password = "gudang_pojok629";
+// const char *ssid = "TP-Link_0BA8";
+// const char *password = "16275676";
 const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
 const int mqtt_port = 8883;
 const char *mqtt_username = "myplant";
 const char *mqtt_password = "myplant12345";
 
 // MQTT topics
-const char *mqtt_topic_control = "myplant/control";
-const char *mqtt_topic_web = "myplant/web";
-const char *mqtt_topic_status = "myplant/status";
-const char *mqtt_topic_duration = "myplant/duration";
-const char *mqtt_topic_runtime = "myplant/runtime";
-const char *mqtt_topic_relay_mode = "myplant/keranmode";
-const char *mqtt_topic_device_mode = "myplant/devicemode";
+const char *mqtt_topic_control = "myplant/control";          // for control spesific keran
+const char *mqtt_topic_bulk_control = "myplant/bulkcontrol"; // for bulkcontrol keran
+const char *mqtt_topic_web = "myplant/web";                  // initial state for web client render first time
+const char *mqtt_topic_status = "myplant/status";            // status keran RUNNING | PAUSED | OFF
+const char *mqtt_topic_duration = "myplant/duration";        // for runtime duration in ms
+const char *mqtt_topic_runtime = "myplant/runtime";          // for runtime keran in ms
+const char *mqtt_topic_relay_mode = "myplant/keranmode";     // for spesific keran mode "now" | "datetime"
+const char *mqtt_topic_device_mode = "myplant/devicemode";   // for device mode SCHEDULE | MANUAL
 
 // Number of relays
 const int numberOfRelays = 12;
@@ -140,6 +141,7 @@ void connectToMQTTBroker()
       mqtt_client.subscribe(mqtt_topic_control);
       mqtt_client.subscribe(mqtt_topic_web);
       mqtt_client.subscribe(mqtt_topic_relay_mode);
+      mqtt_client.subscribe(mqtt_topic_bulk_control);
       Serial.println("Connected to MQTT Broker");
     }
     else
@@ -158,7 +160,11 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
     message += (char)payload[i];
   }
 
-  Serial.printf("Received %d : %d \n", topic, message);
+  // Print the message and result to the serial monitor
+  Serial.print("Received ");
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.println(message);
 
   if (String(topic) == mqtt_topic_web)
   {
@@ -167,15 +173,24 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
       initState();
     }
   }
+
   else if (String(topic) == mqtt_topic_control)
   {
     processMessage(message);
   }
+
   else if (String(topic) == mqtt_topic_relay_mode)
   {
     scheduleRelays(message);
   }
+
+  else if (String(topic) == mqtt_topic_bulk_control)
+  {
+    bulkControl(message);
+    resetAllStates();
+  }
 }
+
 void processMessage(String message)
 {
   StaticJsonDocument<200> doc;
@@ -199,6 +214,45 @@ void processMessage(String message)
   }
 
   controlRelay(keranID, status, duration);
+}
+
+void bulkControl(const String &message)
+{
+  // Parse the incoming message for the indices
+  StaticJsonDocument<256> doc;
+  DeserializationError error = deserializeJson(doc, message);
+
+  if (error)
+  {
+    Serial.println("Failed to parse bulk control message");
+    return;
+  }
+
+  // Extract the "index" array from the message
+  if (!doc.containsKey("listKeran"))
+  {
+    Serial.println("Bulk control message missing 'index' key");
+    return;
+  }
+
+  JsonArray indices = doc["listKeran"].as<JsonArray>();
+
+  // Turn off relays for all specified indices
+  for (int index : indices)
+  {
+    if (index >= 0 && index < numberOfRelays)
+    { // Ensure valid relay index
+      if (relayState[index] == "RUNNING")
+      {
+        controlRelay(index, "OFF", 0); // Turn OFF the relay
+        Serial.printf("Relay %d turned OFF via bulk control\n", index + 1);
+      }
+    }
+    else
+    {
+      Serial.printf("Invalid relay index: %d\n", index);
+    }
+  }
 }
 
 void controlRelay(int relayID, String command, int duration)
@@ -310,19 +364,9 @@ void publishModeStatus()
 {
   StaticJsonDocument<256> doc;
   doc["mode"] = deviceMode;
-
-  if (startDate == "now" && startTime == "now") // Check if startDate and startTime are "now"
-  {
-    doc["date"] = "now"; // Send "now" as a string
-    doc["time"] = "now"; // Include startTime as well
-  }
-  else
-  {
-    doc["date"] = startDate; // Send startDate as is
-    doc["time"] = startTime; // Send startTime as is
-  }
-
-  doc["duration"] = nextDuration;
+  doc["date"] = startDate;        // Send startDate as is
+  doc["time"] = startTime;        // Send startTime as is
+  doc["duration"] = nextDuration; // duration
 
   // Add bookedRelay as a JSON array
   JsonArray bookedArray = doc.createNestedArray("booked");
@@ -334,6 +378,12 @@ void publishModeStatus()
   char buffer[256];
   serializeJson(doc, buffer, sizeof(buffer));
   bool success = mqtt_client.publish(mqtt_topic_device_mode, buffer);
+
+  // Print the message and result to the serial monitor
+  Serial.print("Published ");
+  Serial.print(mqtt_topic_device_mode);
+  Serial.print(": ");
+  Serial.println(success ? "Success" : " Error");
 }
 
 void scheduleRelays(String message)
@@ -384,21 +434,32 @@ void scheduleRelays(String message)
 
 void activateNextRelay()
 {
-  if (!sequenceActive || currentRelayIndex >= relayOrder.size())
+  // check if all DONE
+  if (currentRelayIndex >= relayOrder.size() && getCurrentTime() >= nextRelayActivationTime)
   {
+    Serial.println("Sequencing is DONE!!");
     resetAllStates();
     publishModeStatus();
 
-    Serial.println("Relay sequence completed.");
     return;
   }
 
   int relayID = relayOrder[currentRelayIndex];
   controlRelay(relayID, "RUNNING", nextDuration); // Run the relay for the given duration
 
+  if (isAlternate) // Update the activation time for the next relay
+  {
+    // If alternate mode, activate the next relay after the same duration
+    nextRelayActivationTime = getCurrentTime() + (nextDuration * 60); // minute to seconds
+    publishModeStatus();
+  }
+  else
+  {
+    nextRelayActivationTime = getCurrentTime(); // If simultaneous mode, activate the next relay simultaneously after the duration
+  }
+
   // remove booked/schedule relay
   removeBookedRelay(bookedRelay);
-
   currentRelayIndex++; // Move to the next relay in the sequence
 }
 
@@ -453,7 +514,6 @@ void initState()
   publishRelayStatus();
   publishRelayDuration();
   publishRelayRuntime();
-  publishModeStatus();
 }
 
 void loop()
@@ -471,20 +531,9 @@ void loop()
     {
       activateNextRelay(); // Activate the current relay
 
-      if (isAlternate) // Update the activation time for the next relay
-      {
-        // If alternate mode, activate the next relay after the same duration
-        nextRelayActivationTime = getCurrentTime() + (nextDuration * 60); // minute to seconds
-      }
-      else
-      {
-        nextRelayActivationTime = getCurrentTime(); // If simultaneous mode, activate the next relay simultaneously after the duration
-      }
-
       if (currentRelayIndex >= relayOrder.size()) // Check if we have activated all relays
       {
-        Serial.println("All relays have been activated.");
-        sequenceActive = false; // Stop the sequence
+        nextRelayActivationTime = getCurrentTime() + (nextDuration * 60); // wait all relay done based on its duration
       }
     }
   }
@@ -513,4 +562,5 @@ void resetAllStates() /// Reset other global variables
   isAlternate = true; // Default to alternate mode
   currentRelayIndex = 0;
   nextRelayActivationTime = 0;
+  nextDuration = 0;
 }

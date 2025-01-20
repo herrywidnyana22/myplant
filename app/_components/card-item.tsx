@@ -16,6 +16,7 @@ import { DurationButtonNew } from "./duration-button-new";
 import CustomDurationPicker from "./custom-duration-picker";
 import TimeCountdown from "./time-countdown";
 import { ControlButtonGroup } from "./control-button-group";
+import { OverlayEffect } from "./overlay";
 
 export type CardItemProps={
     id:number
@@ -24,6 +25,9 @@ export type CardItemProps={
     duration: number
     time: number
     collapse?: boolean
+    dateLabel:string | null
+    durationLabel:string | null
+    disabled: boolean
 } & KeranStatusProps
 
 export const CardItem = ({
@@ -34,6 +38,9 @@ export const CardItem = ({
     status,
     time,
     collapse,
+    dateLabel,
+    durationLabel,
+    disabled
 }: CardItemProps) => {
 
     const isNewDuration = !durationOptionData.some(option => option.duration === duration);
@@ -125,8 +132,11 @@ export const CardItem = ({
     return ( 
     <>
         <ConfirmMode/>
-        <div
+        <fieldset 
+            disabled={disabled}
             className="
+                group
+                relative
                 flex 
                 justify-center
                 gap-2
@@ -135,7 +145,6 @@ export const CardItem = ({
             <div
                 style={{
                     transform: collapse ? `translateY(${id * -87}%)` : `translateY(0)`
-                    // transform: collapse ? `translateY(${id * -65}%)` : `translateY(0)`
                 }}
                 className={cn(`
                     relative
@@ -149,6 +158,8 @@ export const CardItem = ({
                     transition-all  
                     duration-500 
                     bg-primary-1`, 
+                    disabled ? "shadow-shadow-booked": "shadow-card-shadow"
+
                 )}
             >
                 <div
@@ -291,7 +302,32 @@ export const CardItem = ({
             
             }       
             </div>
-        </div>
+            {
+                disabled && 
+                <OverlayEffect
+                    className="
+                        h-full 
+                        w-64 
+                        flex
+                        flex-col
+                        items-center
+                        justify-center
+                        p-6
+                        space-y-2
+                        rounded-3xl
+                    "
+                        
+                >
+                    <p className="font-semibold text-2xl text-white tracking-widest">Terjadwal</p>
+                    <p className="text-xs text-white tracking-widest">{dateLabel}</p>
+                    <p className="text-xs text-white tracking-widest">{durationLabel}</p>
+                    <p className="p-4 text-[10px] text-white tracking-widest">
+                        {duration !== 0 ? "Berjalan.." : "Menunggu antrian.." } 
+                    </p>
+                </OverlayEffect>
+            }
+            
+        </fieldset>
     </>
     )
 }

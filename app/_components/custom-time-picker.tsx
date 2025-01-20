@@ -52,7 +52,7 @@ useEffect(() => {
     }
     }, [isDateNow])
 
-    const getSelectedItem = (ref: React.RefObject<HTMLDivElement>, items: number[], limit:number) => {
+    const getSelectedItem = (ref: React.RefObject<HTMLDivElement>, items: number[]) => {
         if (ref.current) {
             const currentScrollTop = ref.current.scrollTop
             const closestIndex = Math.round(currentScrollTop / itemHeight) - 1
@@ -72,7 +72,7 @@ useEffect(() => {
         if (!ref.current) return;
     
         const currentScrollTop = ref.current.scrollTop;
-        const selectedItem = getSelectedItem(ref, items, limit);
+        const selectedItem = getSelectedItem(ref, items);
     
         // Prevent upward scrolling past the limit
         const closestIndex = Math.round(currentScrollTop / itemHeight) - 1;
