@@ -12,7 +12,8 @@ export const DynamicIsland = ({children}: DynamicIslandProps) => {
                 px-6
                 py-1
                 rounded-full
-                text-sm
+                text-[12px]
+                lg:text-sm
                 font-semibold
                 text-zinc-500
             "
