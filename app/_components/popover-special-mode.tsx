@@ -153,9 +153,8 @@ export const PopoverSpecialMode = ({
                             pb-4
                         "
                     >
-                        Kamu bisa atur durasi serta kapan keran diaktifkan
-                        keran akan menyala satu per satu secara bergantian berdasar
-                        urutan dan durasi keran.
+                        Kamu bisa atur urutan, durasi dan kapan keran diaktifkan,
+                        serta bisa dinyalakan bergantian atau berbarengan.
                     </p>
                     <div
                         className="

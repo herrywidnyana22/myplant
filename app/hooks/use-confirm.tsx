@@ -46,7 +46,14 @@ export const useConfirm = (
                         { msg }
                     </DialogDescription>
                 </DialogHeader>
-                <DialogFooter className="pt-2">
+                <DialogFooter 
+                    className="
+                        pt-2 
+                        gap-2 
+                        md:items-center 
+                        md:gap-0
+                    "
+                >
                     <Button
                         variant={"outline"}
                         onClick={onCancel}
