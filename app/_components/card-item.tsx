@@ -220,7 +220,7 @@ export const CardItem = ({
                     onMode === "TIMER" &&
                     (
                     <div 
-                        className="
+                        className={cn(`
                             w-full
                             py-2
                             grid 
@@ -228,8 +228,9 @@ export const CardItem = ({
                             gap-1 
                             justify-items-center 
                             border border-spacing-1
-                            rounded-xl
-                        "
+                            rounded-xl`,
+                            collapse && "hidden"
+                        )}
                     >
                     {
                         durationOptionData.map((item, i) => (

@@ -258,7 +258,7 @@ export const Card = () => {
                             p-2
                             overflow-y-auto
                             scroll-smooth`,
-                            isCollapse && "overflow-hidden h-[600px]"
+                            // isCollapse && "overflow-hidden"
                         )}
                     >
                         {
