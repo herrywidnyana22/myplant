@@ -6,6 +6,7 @@
 #include <TimeLib.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <HTTPClient.h>
 
 // WiFi and MQTT credentials
 const char *ssid = "GUDANG POJOK";
@@ -26,6 +27,10 @@ const char *mqtt_topic_duration = "myplant/duration";        // for runtime dura
 const char *mqtt_topic_runtime = "myplant/runtime";          // for runtime keran in ms
 const char *mqtt_topic_relay_mode = "myplant/keranmode";     // for spesific keran mode "now" | "datetime"
 const char *mqtt_topic_device_mode = "myplant/devicemode";   // for device mode SCHEDULE | MANUAL
+
+// ipstack API key
+const String API_KEY = "658a0ceca0d7b1f3d452942bb8bc819f";
+const String API_URL = "http://api.ipstack.com/check?access_key=" + API_KEY; // API endpoint
 
 // Number of relays
 const int numberOfRelays = 12;
@@ -64,6 +69,8 @@ std::vector<int>::size_type nextDuration = 0; // in minute
 
 std::vector<int> relayOrder;
 std::vector<int> bookedRelay;
+
+unsigned long lastLocationRequestTime = 0; // Store the last time getLocation was called
 
 // Function prototypes
 void connectToWiFi();
@@ -509,6 +516,80 @@ time_t getScheduleTime()
   return scheduledEpoch;
 }
 
+void getLocation()
+{
+  WiFiClientSecure client;
+  client.setInsecure();
+
+  const char *host = "api.ipstack.com";
+
+  if (!client.connect(host, 443))
+  {
+    Serial.println("Connection to ipstack API failed!");
+    return;
+  }
+
+  // Send HTTP request
+  String url = "/check?access_key=" + API_KEY;
+  client.println("GET " + url + " HTTP/1.1");
+  client.println("Host: " + String(host));
+  client.println("Connection: close");
+  client.println();
+
+  // Read the response
+  String response = "";
+  while (client.connected() || client.available())
+  {
+    String line = client.readStringUntil('\n');
+    if (line == "\r")
+      break; // End of headers
+    response += line;
+  }
+
+  // Read JSON body
+  String jsonBody = "";
+  while (client.available())
+  {
+    jsonBody += client.readString();
+  }
+
+  client.stop();
+
+  // Remove non-JSON characters (like chunked encoding size)
+  jsonBody.trim(); // Remove leading/trailing whitespace
+  int startIndex = jsonBody.indexOf('{');
+  if (startIndex >= 0)
+  {
+    jsonBody = jsonBody.substring(startIndex); // Keep only the JSON part
+  }
+
+  // Debug: Print cleaned JSON body
+  Serial.println("Cleaned JSON Body:");
+  Serial.println(jsonBody);
+
+  // Parse JSON
+  DynamicJsonDocument doc(1024);
+  DeserializationError error = deserializeJson(doc, jsonBody);
+
+  if (error)
+  {
+    Serial.print("JSON Parsing failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  // Extract required data
+  double latitude = doc["latitude"];
+  double longitude = doc["longitude"];
+  String city = doc["city"];
+  String region = doc["region_name"];
+  String country = doc["country_name"];
+
+  Serial.println("Real-Time Location Data:");
+  Serial.printf("Latitude: %f, Longitude: %f\n", latitude, longitude);
+  Serial.printf("City: %s, Region: %s, Country: %s\n", city.c_str(), region.c_str(), country.c_str());
+}
+
 void initState()
 {
   publishRelayStatus();
@@ -551,6 +632,14 @@ void loop()
       }
     }
   }
+
+  //   unsigned long currentMillis = millis();
+  //   unsigned long locationInterval = 6000;
+  //   if (currentMillis - lastLocationRequestTime >= locationInterval)
+  //   {
+  //     lastLocationRequestTime = currentMillis; // Update the last request time
+  //     getLocation(); // Call your function to get the location
+  //   }
 }
 
 void resetAllStates() /// Reset other global variables
