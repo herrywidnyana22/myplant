@@ -19,8 +19,8 @@ const CustomTimePicker = ({
 
     const hoursRef = useRef<HTMLDivElement>(null)
     const minutesRef = useRef<HTMLDivElement>(null)
-    const itemHeight = 28// Adjusted item height in pixels
-    const visibleItems = 9 // Number of visible items in the scrolling list
+    const itemHeight = 32// Adjusted item height in pixels
+    const visibleItems = 8// Number of visible items in the scrolling list
     const centerIndex = Math.floor(visibleItems / 2) 
 
     const hours = Array.from({ length: 24 }, (_, i) => i)
@@ -29,7 +29,7 @@ const CustomTimePicker = ({
     // Calculate default hour and minute based on the current time
     const now = new Date();
     let defaultHour = isDateNow ? now.getHours() : hour;
-    let defaultMinute = isDateNow ? now.getMinutes() + 5 : minute;
+    let defaultMinute = isDateNow ? now.getMinutes() : minute;
 
     if (defaultMinute >= 60) {
         defaultMinute -= 60;
@@ -55,12 +55,14 @@ useEffect(() => {
     const getSelectedItem = (ref: React.RefObject<HTMLDivElement>, items: number[]) => {
         if (ref.current) {
             const currentScrollTop = ref.current.scrollTop
-            const closestIndex = Math.round(currentScrollTop / itemHeight) - 1
-            
+            const closestIndex = Math.round(1.14 * (currentScrollTop / itemHeight) - 1.904)
+            // const closestIndex = Math.floor(currentScrollTop * 0.0357 - 7.214) // sample 1
+
+
             return items[closestIndex] !== undefined ? items[closestIndex] : 0
         }
         return 0;
-    };
+    }
 
     // Scroll handler to update selected state
     const handleScroll = (
@@ -69,18 +71,18 @@ useEffect(() => {
         setSelected: (value: number) => void,
         limit: number
     ) => {
-        if (!ref.current) return;
+        if (!ref.current) return
     
-        const currentScrollTop = ref.current.scrollTop;
-        const selectedItem = getSelectedItem(ref, items);
-    
-        // Prevent upward scrolling past the limit
-        const closestIndex = Math.round(currentScrollTop / itemHeight) - 1;
+        const currentScrollTop = ref.current.scrollTop
+        const selectedItem = getSelectedItem(ref, items)
+        
+        const closestIndex = Math.round(1.14 * (currentScrollTop / itemHeight) - 1.904)
+        const scrollTop = (limit + 1 ) * itemHeight - 10
+        
         if (isDateNow && items[closestIndex] < limit) {
-            ref.current.scrollTop = (limit + 1) * itemHeight// Snap back to the limit
+            ref.current.scrollTop = scrollTop// Snap back to the limit
             return;
         }
-    
         setSelected(selectedItem);
     };
 
@@ -95,7 +97,6 @@ useEffect(() => {
                     space-x-1
                 "
             >
-                {JSON.stringify({isDateNow})}
                 {/* Hours Wheel */}
                 <div
                     ref={hoursRef}
@@ -152,7 +153,7 @@ useEffect(() => {
                 {/* Minutes Wheel */}
                 <div
                     ref={minutesRef}
-                    onScroll={() => handleScroll(minutesRef, minutes, setMinute, defaultMinute)}
+                    onScroll={() => handleScroll(minutesRef, minutes, setMinute, hour !== defaultHour ? 0 : defaultMinute)}
                     className="
                         relative 
                         w-8 
