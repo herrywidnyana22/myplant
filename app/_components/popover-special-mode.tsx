@@ -132,7 +132,6 @@ export const PopoverSpecialMode = ({
                     w-2/3
                     md:w-full 
                     max-w-lg
-                    sm:space-y-2
                 "
             >
                 
@@ -144,7 +143,7 @@ export const PopoverSpecialMode = ({
                 >
                     Mode Spesial
                 </h1>
-                <ScrollArea className="h-[480px] md:h-[540px] py-4">
+                <ScrollArea className="h-[480px] md:h-[550px] py-4 pt-1 overflow-auto">
                     <p
                         className="
                             text-muted-foreground 
