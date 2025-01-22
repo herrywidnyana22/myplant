@@ -446,7 +446,6 @@ void activateNextRelay()
   {
     Serial.println("Sequencing is DONE!!");
     resetAllStates();
-    publishModeStatus();
 
     return;
   }
@@ -595,6 +594,7 @@ void initState()
   publishRelayStatus();
   publishRelayDuration();
   publishRelayRuntime();
+  publishModeStatus();
 }
 
 void loop()
