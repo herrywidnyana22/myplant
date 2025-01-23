@@ -23,6 +23,8 @@ type PopoverSpecialModeProps = {
     onOpenChange: (open: boolean) => void
 }
 
+const TIME_MINIMAL_FROM_CURRENT = 5
+
 export const PopoverSpecialMode = ({
     children,
     data,
@@ -35,7 +37,7 @@ export const PopoverSpecialMode = ({
     const [isNow, setIsNow] = useState(false)
     const [isAlternate, setIsAlternate] = useState(true)
     const [hour, setHour] = useState(new Date().getHours())
-    const [minute, setMinute] = useState(new Date().getMinutes() + 5)
+    const [minute, setMinute] = useState(new Date().getMinutes() + TIME_MINIMAL_FROM_CURRENT)
     const [durationActive, setDurationActive] = useState("")
     const [newDuration, setNewDuration]= useState(0)
     const [selectedDuration, setSelectedDuration]= useState(0)
@@ -86,7 +88,21 @@ export const PopoverSpecialMode = ({
         )
     }
 
+
     const onConfirm = async() => {
+        const now = new Date()
+        const selectedDatetime = selectedDate
+
+        selectedDate.setHours(hour);
+        selectedDatetime.setMinutes(minute);
+        selectedDatetime.setSeconds(0);
+
+        const minimumTime = new Date(now.getTime() + TIME_MINIMAL_FROM_CURRENT * 60 * 1000); // Add 5 minutes
+
+        if (selectedDate < minimumTime) {
+            return toast.error("Jadwal minimal 5 menit dari sekarang!")
+        } 
+        
         if (selectedDuration <= 0) {
             return toast.error("Tentukan durasi keran hidup!")
         }

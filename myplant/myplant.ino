@@ -9,10 +9,12 @@
 #include <HTTPClient.h>
 
 // WiFi and MQTT credentials
-const char *ssid = "GUDANG POJOK";
-const char *password = "gudang_pojok629";
+// const char *ssid = "GUDANG POJOK";
+// const char *password = "gudang_pojok629";
 // const char *ssid = "TP-Link_0BA8";
 // const char *password = "16275676";
+const char *ssid = "HAI";
+const char *password = "wifi*123#";
 const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
 const int mqtt_port = 8883;
 const char *mqtt_username = "myplant";
@@ -31,6 +33,10 @@ const char *mqtt_topic_device_mode = "myplant/devicemode";   // for device mode 
 // ipstack API key
 const String API_KEY = "658a0ceca0d7b1f3d452942bb8bc819f";
 const String API_URL = "http://api.ipstack.com/check?access_key=" + API_KEY; // API endpoint
+
+// location purpose
+unsigned long lastLocationRequestTime = 0; // Store the last time getLocation was called
+const char *host = "api.ipstack.com";
 
 // Number of relays
 const int numberOfRelays = 12;
@@ -70,8 +76,6 @@ std::vector<int>::size_type nextDuration = 0; // in minute
 std::vector<int> relayOrder;
 std::vector<int> bookedRelay;
 
-unsigned long lastLocationRequestTime = 0; // Store the last time getLocation was called
-
 // Function prototypes
 void connectToWiFi();
 void connectToMQTTBroker();
@@ -92,6 +96,7 @@ void setup()
   Serial.begin(9600);
   espClient.setInsecure();
 
+  WiFi.begin(ssid, password);
   connectToWiFi();
 
   mqtt_client.setServer(mqtt_broker, mqtt_port);
@@ -113,12 +118,12 @@ void setup()
     timeClient.forceUpdate();
   }
 
-  initState();
+  callRelayState();
+  publishModeStatus();
 }
 
 void connectToWiFi()
 {
-  WiFi.begin(ssid, password);
   Serial.print("Connecting to WiFi");
   int timeout = 0;
   while (WiFi.status() != WL_CONNECTED)
@@ -134,7 +139,7 @@ void connectToWiFi()
   }
   if (WiFi.status() == WL_CONNECTED)
   {
-    Serial.println("[CONNECTED]");
+    Serial.println("[WIFI CONNECTED]");
   }
 }
 
@@ -149,7 +154,7 @@ void connectToMQTTBroker()
       mqtt_client.subscribe(mqtt_topic_web);
       mqtt_client.subscribe(mqtt_topic_relay_mode);
       mqtt_client.subscribe(mqtt_topic_bulk_control);
-      Serial.println("Connected to MQTT Broker");
+      Serial.println("[MQTT CONNECTED]");
     }
     else
     {
@@ -177,7 +182,8 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
   {
     if (message == "init")
     {
-      initState();
+      callRelayState();
+      publishModeStatus();
     }
   }
 
@@ -193,8 +199,9 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
 
   else if (String(topic) == mqtt_topic_bulk_control)
   {
-    bulkControl(message);
     resetAllStates();
+    bulkControl(message);
+    publishModeStatus();
   }
 }
 
@@ -307,7 +314,7 @@ void controlRelay(int relayID, String command, int duration)
     lastMillis[relayID] = millis(); // Reset start time
   }
 
-  initState();
+  callRelayState();
 }
 
 void publishMessage(const char *topic, const char *dataType)
@@ -446,26 +453,36 @@ void activateNextRelay()
   {
     Serial.println("Sequencing is DONE!!");
     resetAllStates();
-
+    publishModeStatus();
     return;
   }
 
+  // Serial.print("Booked Relay: ");
+  // for (size_t i = 0; i < bookedRelay.size(); i++) {
+  //     Serial.print(bookedRelay[i]);
+  //     if (i < bookedRelay.size() - 1) {
+  //         Serial.print(", "); // Add a comma between elements
+  //     }
+  // }
+
+  // Serial.println();
+
   int relayID = relayOrder[currentRelayIndex];
   controlRelay(relayID, "RUNNING", nextDuration); // Run the relay for the given duration
+  publishModeStatus();                            // update relay booked and device status to client
 
   if (isAlternate) // Update the activation time for the next relay
   {
     // If alternate mode, activate the next relay after the same duration
     nextRelayActivationTime = getCurrentTime() + (nextDuration * 60); // minute to seconds
-    publishModeStatus();
+
+    removeBookedRelay(bookedRelay); // remove booked/schedule relay
   }
   else
   {
     nextRelayActivationTime = getCurrentTime(); // If simultaneous mode, activate the next relay simultaneously after the duration
   }
 
-  // remove booked/schedule relay
-  removeBookedRelay(bookedRelay);
   currentRelayIndex++; // Move to the next relay in the sequence
 }
 
@@ -500,7 +517,6 @@ time_t parseScheduledTime(String date, String time)
 
 time_t getCurrentTime()
 {
-
   timeClient.update();                    // Update time
   time_t now = timeClient.getEpochTime(); // Get current time
 
@@ -519,8 +535,6 @@ void getLocation()
 {
   WiFiClientSecure client;
   client.setInsecure();
-
-  const char *host = "api.ipstack.com";
 
   if (!client.connect(host, 443))
   {
@@ -589,12 +603,11 @@ void getLocation()
   Serial.printf("City: %s, Region: %s, Country: %s\n", city.c_str(), region.c_str(), country.c_str());
 }
 
-void initState()
+void callRelayState()
 {
   publishRelayStatus();
   publishRelayDuration();
   publishRelayRuntime();
-  publishModeStatus();
 }
 
 void loop()
@@ -632,14 +645,6 @@ void loop()
       }
     }
   }
-
-  //   unsigned long currentMillis = millis();
-  //   unsigned long locationInterval = 6000;
-  //   if (currentMillis - lastLocationRequestTime >= locationInterval)
-  //   {
-  //     lastLocationRequestTime = currentMillis; // Update the last request time
-  //     getLocation(); // Call your function to get the location
-  //   }
 }
 
 void resetAllStates() /// Reset other global variables
@@ -652,4 +657,5 @@ void resetAllStates() /// Reset other global variables
   currentRelayIndex = 0;
   nextRelayActivationTime = 0;
   nextDuration = 0;
+  bookedRelay.clear();
 }
