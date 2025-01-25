@@ -291,8 +291,6 @@ export const CardItem = ({
                     <div 
                         className="
                             py-2
-                            border 
-                            border-spacing-1
                             rounded-xl
                         "
                     >

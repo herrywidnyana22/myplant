@@ -99,7 +99,7 @@ export const PopoverSpecialMode = ({
 
         const minimumTime = new Date(now.getTime() + TIME_MINIMAL_FROM_CURRENT * 60 * 1000); // Add 5 minutes
 
-        if (selectedDate < minimumTime) {
+        if (!isNow && selectedDate <= minimumTime) {
             return toast.error("Jadwal minimal 5 menit dari sekarang!")
         } 
         
@@ -310,19 +310,15 @@ export const PopoverSpecialMode = ({
                                 (
                                     <div 
                                         className="
-                                            w-2/3
+                                            w-full
                                             text-center
-                                            mt-2
                                             border-t 
-                                            border-spacing-1
-                                            
+                                            border-spacing-2
                                         "
                                     >
                                         <CustomDurationPicker onSelect={handleNewDurationSelect} />
                                     </div>
-
                                 )
-                            
                             }
                         </div>
 

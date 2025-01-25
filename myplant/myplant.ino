@@ -9,12 +9,12 @@
 #include <HTTPClient.h>
 
 // WiFi and MQTT credentials
-// const char *ssid = "GUDANG POJOK";
-// const char *password = "gudang_pojok629";
+const char *ssid = "GUDANG POJOK";
+const char *password = "gudang_pojok629";
 // const char *ssid = "TP-Link_0BA8";
 // const char *password = "16275676";
-const char *ssid = "HAI";
-const char *password = "wifi*123#";
+// const char *ssid = "HAI";
+// const char *password = "wifi*123#";
 const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
 const int mqtt_port = 8883;
 const char *mqtt_username = "myplant";
@@ -46,6 +46,11 @@ const int numberOfRelays = 12;
 // 7-D27, 8-D14, 9-D26, 10-D04, 11-D19, 12-D33
 
 std::vector<int> relayPins = {22, 23, 5, 18, 21, 19, 27, 14, 26, 4, 32, 33}; // Ensure this matches the number of relays
+
+// Pins for RGB LED
+const int redPin = 12;   // GPIO for the red channel
+const int greenPin = 13; // GPIO for the green channel
+const int bluePin = 15;  // GPIO for the blue channel
 
 // Relay states and runtimes
 std::vector<String> relayState(numberOfRelays, "OFF");
@@ -94,6 +99,12 @@ time_t parseScheduledTime(String date, String time);
 void setup()
 {
   Serial.begin(9600);
+  // Initialize RGB LED pins
+  pinMode(redPin, OUTPUT);
+  pinMode(greenPin, OUTPUT);
+  pinMode(bluePin, OUTPUT);
+  setRGBColor(0, 0, 0); // Turn off RGB LED initially
+
   espClient.setInsecure();
 
   WiFi.begin(ssid, password);
@@ -122,6 +133,13 @@ void setup()
   publishModeStatus();
 }
 
+void setRGBColor(int redValue, int greenValue, int blueValue)
+{
+  analogWrite(redPin, redValue);     // Set brightness for red
+  analogWrite(greenPin, greenValue); // Set brightness for green
+  analogWrite(bluePin, blueValue);   // Set brightness for blue
+}
+
 void connectToWiFi()
 {
   Serial.print("Connecting to WiFi");
@@ -134,6 +152,7 @@ void connectToWiFi()
     if (timeout > 20)
     { // Timeout after 10 seconds
       Serial.print("[TIME OUT]");
+      setRGBColor(0, 0, 0); // Turn off LED on timeout
       break;
     }
   }
@@ -145,8 +164,11 @@ void connectToWiFi()
 
 void connectToMQTTBroker()
 {
-  while (!mqtt_client.connected())
+  while (WiFi.status() == WL_CONNECTED && !mqtt_client.connected())
   {
+    Serial.print("Connecting to MQTT...");
+    setRGBColor(0, 0, 255); // Set RGB to blue while attempting to connect
+
     String client_id = "noid-client-" + String(WiFi.macAddress());
     if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password))
     {
@@ -154,12 +176,15 @@ void connectToMQTTBroker()
       mqtt_client.subscribe(mqtt_topic_web);
       mqtt_client.subscribe(mqtt_topic_relay_mode);
       mqtt_client.subscribe(mqtt_topic_bulk_control);
+
       Serial.println("[MQTT CONNECTED]");
+      setRGBColor(0, 255, 0); // Set RGB to green when connected
     }
     else
     {
       Serial.println("Failed to connect to MQTT broker. Retrying in 5 seconds...");
-      delay(5000);
+      setRGBColor(255, 0, 0) // Set RGB to red on failure
+          delay(5000);
     }
   }
 }
@@ -457,32 +482,39 @@ void activateNextRelay()
     return;
   }
 
-  // Serial.print("Booked Relay: ");
-  // for (size_t i = 0; i < bookedRelay.size(); i++) {
-  //     Serial.print(bookedRelay[i]);
-  //     if (i < bookedRelay.size() - 1) {
-  //         Serial.print(", "); // Add a comma between elements
-  //     }
-  // }
-
-  // Serial.println();
-
   int relayID = relayOrder[currentRelayIndex];
   controlRelay(relayID, "RUNNING", nextDuration); // Run the relay for the given duration
-  publishModeStatus();                            // update relay booked and device status to client
 
   if (isAlternate) // Update the activation time for the next relay
   {
     // If alternate mode, activate the next relay after the same duration
-    nextRelayActivationTime = getCurrentTime() + (nextDuration * 60); // minute to seconds
+    if (currentRelayIndex > 0)
+    {
+      removeBookedRelay(bookedRelay); // remove booked/schedule relay
+    }
 
-    removeBookedRelay(bookedRelay); // remove booked/schedule relay
+    nextRelayActivationTime = getCurrentTime() + (nextDuration * 60); // minute to seconds
   }
   else
   {
     nextRelayActivationTime = getCurrentTime(); // If simultaneous mode, activate the next relay simultaneously after the duration
   }
 
+  Serial.print("Booked Relay: ");
+  for (size_t i = 0; i < bookedRelay.size(); i++)
+  {
+    Serial.print(bookedRelay[i]);
+    if (i < bookedRelay.size() - 1)
+    {
+      Serial.print(", "); // Add a comma between elements
+    }
+  }
+
+  Serial.println();
+  Serial.print("IsAlternate: ");
+  Serial.println(isAlternate);
+
+  publishModeStatus(); // update relay booked and device status to client
   currentRelayIndex++; // Move to the next relay in the sequence
 }
 
@@ -612,11 +644,25 @@ void callRelayState()
 
 void loop()
 {
-  if (!mqtt_client.connected())
+  // Ensure Wi-Fi is connected
+  if (WiFi.status() != WL_CONNECTED)
   {
+    Serial.println("WiFi disconnected. Reconnecting...");
+    setRGBColor(0, 0, 0); // Turn off LED if Wi-Fi is disconnected
+    connectToWiFi();
+  }
+
+  // Ensure MQTT is connected
+  if (WiFi.status() == WL_CONNECTED && !mqtt_client.connected())
+  {
+    setRGBColor(255, 0, 0);
     connectToMQTTBroker();
   }
-  mqtt_client.loop();
+
+  if (mqtt_client.connected())
+  {
+    mqtt_client.loop(); // Keep MQTT connection alive
+  }
 
   if (deviceMode == "SCHEDULE" && sequenceActive) // If the device is in scheduled mode, we need to activate the relays according to the schedule
   {
