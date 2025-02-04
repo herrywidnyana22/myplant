@@ -9,10 +9,10 @@
 #include <HTTPClient.h>
 
 // WiFi and MQTT credentials
-const char *ssid = "GUDANG POJOK";
-const char *password = "gudang_pojok629";
-// const char *ssid = "TP-Link_0BA8";
-// const char *password = "16275676";
+// const char *ssid = "GUDANG POJOK";
+// const char *password = "gudang_pojok629";
+const char *ssid = "TP-Link_0BA8";
+const char *password = "16275676";
 // const char *ssid = "HAI";
 // const char *password = "wifi*123#";
 const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
@@ -48,9 +48,12 @@ const int numberOfRelays = 12;
 std::vector<int> relayPins = {22, 23, 5, 18, 21, 19, 27, 14, 26, 4, 32, 33}; // Ensure this matches the number of relays
 
 // Pins for RGB LED
-const int redPin = 12;   // GPIO for the red channel
-const int greenPin = 13; // GPIO for the green channel
-const int bluePin = 15;  // GPIO for the blue channel
+const int wifiLedPin = 12; // GPIO pin for Wifi status LED
+const int mqttLedPin = 13; // GPIO pin for MQTT status LED
+
+unsigned long wifiPreviousMillis = 0;
+unsigned long mqttPreviousMillis = 0;
+const long blinkInterval = 1400; // 1.4 seconds for blink led connection
 
 // Relay states and runtimes
 std::vector<String> relayState(numberOfRelays, "OFF");
@@ -100,10 +103,8 @@ void setup()
 {
   Serial.begin(9600);
   // Initialize RGB LED pins
-  pinMode(redPin, OUTPUT);
-  pinMode(greenPin, OUTPUT);
-  pinMode(bluePin, OUTPUT);
-  setRGBColor(0, 0, 0); // Turn off RGB LED initially
+  pinMode(wifiLedPin, OUTPUT);
+  pinMode(mqttLedPin, OUTPUT);
 
   espClient.setInsecure();
 
@@ -133,11 +134,43 @@ void setup()
   publishModeStatus();
 }
 
-void setRGBColor(int redValue, int greenValue, int blueValue)
+void updateLEDConnectionStatus()
 {
-  analogWrite(redPin, redValue);     // Set brightness for red
-  analogWrite(greenPin, greenValue); // Set brightness for green
-  analogWrite(bluePin, blueValue);   // Set brightness for blue
+  unsigned long currentMillis = millis();
+
+  // WiFi LED logic
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    if (currentMillis - wifiPreviousMillis >= blinkInterval)
+    {
+      wifiPreviousMillis = currentMillis;
+      wifiLedState = !wifiLedState;
+      digitalWrite(wifiLedPin, wifiLedState);
+    }
+  }
+  else
+  {
+    digitalWrite(wifiLedPin, HIGH); // WiFi connected, turn ON
+  }
+
+  // MQTT LED logic
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    digitalWrite(mqttLedPin, LOW); // Turn OFF if WiFi is not connected
+  }
+  else if (!mqtt_client.connected())
+  {
+    if (currentMillis - mqttPreviousMillis >= blinkInterval)
+    {
+      mqttPreviousMillis = currentMillis;
+      mqttLedState = !mqttLedState;
+      digitalWrite(mqttLedPin, mqttLedState);
+    }
+  }
+  else
+  {
+    digitalWrite(mqttLedPin, HIGH); // MQTT connected, turn ON
+  }
 }
 
 void connectToWiFi()
@@ -146,13 +179,13 @@ void connectToWiFi()
   int timeout = 0;
   while (WiFi.status() != WL_CONNECTED)
   {
+    updateLEDStatus(); // Keep updating LED while connecting
     delay(500);
     Serial.print(".");
     timeout++;
     if (timeout > 20)
     { // Timeout after 10 seconds
       Serial.print("[TIME OUT]");
-      setRGBColor(0, 0, 0); // Turn off LED on timeout
       break;
     }
   }
@@ -167,7 +200,6 @@ void connectToMQTTBroker()
   while (WiFi.status() == WL_CONNECTED && !mqtt_client.connected())
   {
     Serial.print("Connecting to MQTT...");
-    setRGBColor(0, 0, 255); // Set RGB to blue while attempting to connect
 
     String client_id = "noid-client-" + String(WiFi.macAddress());
     if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password))
@@ -178,13 +210,11 @@ void connectToMQTTBroker()
       mqtt_client.subscribe(mqtt_topic_bulk_control);
 
       Serial.println("[MQTT CONNECTED]");
-      setRGBColor(0, 255, 0); // Set RGB to green when connected
     }
     else
     {
       Serial.println("Failed to connect to MQTT broker. Retrying in 5 seconds...");
-      setRGBColor(255, 0, 0) // Set RGB to red on failure
-          delay(5000);
+      delay(5000);
     }
   }
 }
@@ -644,20 +674,7 @@ void callRelayState()
 
 void loop()
 {
-  // Ensure Wi-Fi is connected
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.println("WiFi disconnected. Reconnecting...");
-    setRGBColor(0, 0, 0); // Turn off LED if Wi-Fi is disconnected
-    connectToWiFi();
-  }
-
-  // Ensure MQTT is connected
-  if (WiFi.status() == WL_CONNECTED && !mqtt_client.connected())
-  {
-    setRGBColor(255, 0, 0);
-    connectToMQTTBroker();
-  }
+  updateLEDStatus(); // Keep updating LED status in loop
 
   if (mqtt_client.connected())
   {
