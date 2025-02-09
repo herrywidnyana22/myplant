@@ -55,6 +55,9 @@ unsigned long wifiPreviousMillis = 0;
 unsigned long mqttPreviousMillis = 0;
 const long blinkInterval = 1400; // 1.4 seconds for blink led connection
 
+bool wifiLedState = false;
+bool mqttLedState = false;
+
 // Relay states and runtimes
 std::vector<String> relayState(numberOfRelays, "OFF");
 std::vector<unsigned long> relayDuration(numberOfRelays, 0);
@@ -134,42 +137,28 @@ void setup()
   publishModeStatus();
 }
 
-void updateLEDConnectionStatus()
+void updateWifiLED()
 {
   unsigned long currentMillis = millis();
 
   // WiFi LED logic
-  if (WiFi.status() != WL_CONNECTED)
+  if (currentMillis - wifiPreviousMillis >= blinkInterval)
   {
-    if (currentMillis - wifiPreviousMillis >= blinkInterval)
-    {
-      wifiPreviousMillis = currentMillis;
-      wifiLedState = !wifiLedState;
-      digitalWrite(wifiLedPin, wifiLedState);
-    }
+    wifiPreviousMillis = currentMillis;
+    wifiLedState = !wifiLedState;
+    digitalWrite(wifiLedPin, wifiLedState);
   }
-  else
-  {
-    digitalWrite(wifiLedPin, HIGH); // WiFi connected, turn ON
-  }
+}
 
+void updateMqttLED()
+{
+  unsigned long currentMillis = millis();
   // MQTT LED logic
-  if (WiFi.status() != WL_CONNECTED)
+  if (currentMillis - mqttPreviousMillis >= blinkInterval)
   {
-    digitalWrite(mqttLedPin, LOW); // Turn OFF if WiFi is not connected
-  }
-  else if (!mqtt_client.connected())
-  {
-    if (currentMillis - mqttPreviousMillis >= blinkInterval)
-    {
-      mqttPreviousMillis = currentMillis;
-      mqttLedState = !mqttLedState;
-      digitalWrite(mqttLedPin, mqttLedState);
-    }
-  }
-  else
-  {
-    digitalWrite(mqttLedPin, HIGH); // MQTT connected, turn ON
+    mqttPreviousMillis = currentMillis;
+    mqttLedState = !mqttLedState;
+    digitalWrite(mqttLedPin, mqttLedState);
   }
 }
 
@@ -179,7 +168,7 @@ void connectToWiFi()
   int timeout = 0;
   while (WiFi.status() != WL_CONNECTED)
   {
-    updateLEDStatus(); // Keep updating LED while connecting
+    updateWifiLED(); // Keep updating LED while connecting
     delay(500);
     Serial.print(".");
     timeout++;
@@ -192,14 +181,16 @@ void connectToWiFi()
   if (WiFi.status() == WL_CONNECTED)
   {
     Serial.println("[WIFI CONNECTED]");
+    digitalWrite(wifiLedPin, HIGH);
   }
 }
 
 void connectToMQTTBroker()
 {
-  while (WiFi.status() == WL_CONNECTED && !mqtt_client.connected())
+  while (!mqtt_client.connected())
   {
     Serial.print("Connecting to MQTT...");
+    delay(500);
 
     String client_id = "noid-client-" + String(WiFi.macAddress());
     if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password))
@@ -210,6 +201,7 @@ void connectToMQTTBroker()
       mqtt_client.subscribe(mqtt_topic_bulk_control);
 
       Serial.println("[MQTT CONNECTED]");
+      digitalWrite(mqttLedPin, HIGH);
     }
     else
     {
@@ -674,12 +666,18 @@ void callRelayState()
 
 void loop()
 {
-  updateLEDStatus(); // Keep updating LED status in loop
-
-  if (mqtt_client.connected())
+  if (!WiFi.status() == WL_CONNECTED)
   {
-    mqtt_client.loop(); // Keep MQTT connection alive
+    connectToWiFi();
   }
+
+  if (!mqtt_client.connected())
+  {
+    updateMqttLED();
+    connectToMQTTBroker();
+  }
+
+  mqtt_client.loop();
 
   if (deviceMode == "SCHEDULE" && sequenceActive) // If the device is in scheduled mode, we need to activate the relays according to the schedule
   {

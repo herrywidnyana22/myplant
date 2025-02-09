@@ -418,7 +418,7 @@ export const PopoverSpecialMode = ({
                                                 className={cn(
                                                     "mb-2",
                                                     snapshot.isDragging &&
-                                                    "relative bg-gray-200 px-2 rounded-md z-50 opacity-100"
+                                                    "absolute bg-gray-200 px-1 rounded-md z-50 opacity-100"
                                                 )}
                                             >
                                                 <div 
@@ -464,7 +464,7 @@ export const PopoverSpecialMode = ({
                                     </div>
                                     )}
                                 </Droppable>
-                                </DragDropContext>
+                            </DragDropContext>
 
                         </div>
 
