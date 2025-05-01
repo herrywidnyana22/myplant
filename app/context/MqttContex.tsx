@@ -3,6 +3,15 @@
 import mqtt, { MqttClient } from 'mqtt';
 import { MqttStatusProps } from '../types/MqttStatustype';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+
+
+const TOPICS = ['myplant/status', 'myplant/duration', 'myplant/runtime', 'myplant/devicemode']
+
+const ConnectionStatus = {
+  ONLINE: 'online',
+  OFFLINE: 'offline',
+}
 
 const MqttContext = createContext<{
     client: MqttClient | null
@@ -12,7 +21,7 @@ const MqttContext = createContext<{
     client: null,
     connectStatus: 'OFF',
     setConnectStatus: () => {},
-});
+})
 
 export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [client, setClient] = useState<MqttClient | null>(null);
@@ -24,10 +33,30 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children
             username: process.env.NEXT_PUBLIC_MQTT_USERNAME,
             password: process.env.NEXT_PUBLIC_MQTT_PASSWORD,
             clean: true,
-        });
+            will: {
+                topic: 'myplant/connected',
+                payload: ConnectionStatus.OFFLINE,
+                qos: 1,
+                retain: true
+            }
+        })
 
         mqttClient.on('connect', () => {
             console.log('MQTT Client connected')
+
+            TOPICS.forEach((topic) => {
+                mqttClient.subscribe(topic, (err) => {
+                    if (err) {
+                        toast.error(`Failed to subscribe to ${topic}`);
+                    }
+                })
+            })
+
+            mqttClient.publish(
+                'myplant/connected',
+                ConnectionStatus.ONLINE,
+                { qos: 1, retain: true }
+            )
         })
 
         mqttClient.on('error', (err) => {

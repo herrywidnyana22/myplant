@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMqtt } from '../context/MqttContex';
-import { DeviceModeProps, KeranStatusProps } from '../types/KeranStatusType';
-import { toast } from 'sonner';
+import { DeviceModeProps, KeranStatusProps } from '../types/KeranStatusType'
 
 export type KeranDataProps = {
     id:string
@@ -26,8 +25,6 @@ type RuntimeMessageProps = {
     name: string
     runtime: number
 }
-
-const TOPICS = ['myplant/status', 'myplant/duration', 'myplant/runtime', 'myplant/devicemode']
 
 export const useKeranStatus = () => {
     const [combineStatus, setCombineStatus] = useState<KeranDataProps[]>([])
@@ -129,19 +126,7 @@ export const useKeranStatus = () => {
 
     useEffect(() => {
         if (client) {
-        
-            TOPICS.forEach((topic) => {
-                client.subscribe(topic, (err) => {
-                if (err) {
-                    toast.error(`Failed to subscribe to ${topic}`);
-                }
-                })
-            })
-
-            client.on('message', handleMessage);
-
-            // Publish initialization message
-            client.publish('myplant/web', 'init');
+            client.on('message', handleMessage)
         }
     }, [client])
 
