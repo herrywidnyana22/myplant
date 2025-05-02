@@ -2,12 +2,14 @@ import { cn } from "@/lib/utils"
 
 type OverlayEffectProps = {
     children: React.ReactNode
-    className?: string
+    className?: string,
+    style?: React.CSSProperties;
 }
 
-export const OverlayEffect = ({children, className}: OverlayEffectProps) =>{
+export const OverlayEffect = ({children, className, style}: OverlayEffectProps) =>{
     return(
         <div
+            style={style}
             className={cn(`
                 absolute
                 transition-opacity

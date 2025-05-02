@@ -113,6 +113,10 @@ export const CardItem = ({
         setIsDurationNewActive(false)
     }
 
+    const dynamicStyle = {
+        transform: collapse ? `translateY(${id * -87}%)` : `translateY(0)`
+    }
+
     // Update local state whenever props change
     useEffect(() => {
         setOnMode(durationMode)
@@ -143,9 +147,7 @@ export const CardItem = ({
             "
         >
             <div
-                style={{
-                    transform: collapse ? `translateY(${id * -87}%)` : `translateY(0)`
-                }}
+                style={dynamicStyle}
                 className={cn(`
                     relative
                     w-64
@@ -158,8 +160,7 @@ export const CardItem = ({
                     transition-all  
                     duration-500 
                     bg-primary-1`, 
-                    disabled ? "shadow-shadow-booked": "shadow-card-shadow"
-
+                    disabled ? "shadow-shadow-booked": "shadow-card-shadow",
                 )}
             >
                 <div
@@ -304,6 +305,7 @@ export const CardItem = ({
             {
                 disabled && 
                 <OverlayEffect
+                    style={dynamicStyle}
                     className="
                         h-full 
                         w-64 

@@ -11,10 +11,10 @@
 // WiFi and MQTT credentials
 // const char *ssid = "GUDANG POJOK";
 // const char *password = "gudang_pojok629";
-const char *ssid = "TP-Link_0BA8";
-const char *password = "16275676";
-// const char *ssid = "HAI";
-// const char *password = "wifi*123#";
+// const char *ssid = "TP-Link_0BA8";
+// const char *password = "16275676";
+const char *ssid = "HAI";
+const char *password = "wifi*123#";
 const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
 const int mqtt_port = 8883;
 const char *mqtt_username = "myplant";
@@ -23,20 +23,12 @@ const char *mqtt_password = "myplant12345";
 // MQTT topics
 const char *mqtt_topic_control = "myplant/control";          // for control spesific keran
 const char *mqtt_topic_bulk_control = "myplant/bulkcontrol"; // for bulkcontrol keran
-const char *mqtt_topic_web = "myplant/web";                  // initial state for web client render first time
+const char *mqtt_topic_connected = "myplant/connected";      // initial for online | offline web clinet, only publish when client online
 const char *mqtt_topic_status = "myplant/status";            // status keran RUNNING | PAUSED | OFF
 const char *mqtt_topic_duration = "myplant/duration";        // for runtime duration in ms
 const char *mqtt_topic_runtime = "myplant/runtime";          // for runtime keran in ms
 const char *mqtt_topic_relay_mode = "myplant/keranmode";     // for spesific keran mode "now" | "datetime"
 const char *mqtt_topic_device_mode = "myplant/devicemode";   // for device mode SCHEDULE | MANUAL
-
-// ipstack API key
-const String API_KEY = "658a0ceca0d7b1f3d452942bb8bc819f";
-const String API_URL = "http://api.ipstack.com/check?access_key=" + API_KEY; // API endpoint
-
-// location purpose
-unsigned long lastLocationRequestTime = 0; // Store the last time getLocation was called
-const char *host = "api.ipstack.com";
 
 // Number of relays
 const int numberOfRelays = 12;
@@ -55,6 +47,7 @@ unsigned long wifiPreviousMillis = 0;
 unsigned long mqttPreviousMillis = 0;
 const long blinkInterval = 1400; // 1.4 seconds for blink led connection
 
+bool isClientOnline = false;
 bool wifiLedState = false;
 bool mqttLedState = false;
 
@@ -117,7 +110,7 @@ void setup()
   mqtt_client.setServer(mqtt_broker, mqtt_port);
   mqtt_client.setCallback(receivedMessage);
 
-  connectToMQTTBroker();
+  // connectToMQTTBroker();
 
   // Initialize Relays
   for (int pin : relayPins)
@@ -164,24 +157,22 @@ void updateMqttLED()
 
 void connectToWiFi()
 {
-  Serial.print("Connecting to WiFi");
-  int timeout = 0;
-  while (WiFi.status() != WL_CONNECTED)
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts++ < 20)
   {
-    updateWifiLED(); // Keep updating LED while connecting
-    delay(500);
     Serial.print(".");
-    timeout++;
-    if (timeout > 20)
-    { // Timeout after 10 seconds
-      Serial.print("[TIME OUT]");
-      break;
-    }
+    updateWifiLED();
+    delay(500);
   }
+
   if (WiFi.status() == WL_CONNECTED)
   {
-    Serial.println("[WIFI CONNECTED]");
+    Serial.println("\n[WIFI CONNECTED]");
     digitalWrite(wifiLedPin, HIGH);
+  }
+  else
+  {
+    Serial.println("\n[WIFI CONNECTION TIMEOUT]");
   }
 }
 
@@ -193,10 +184,11 @@ void connectToMQTTBroker()
     delay(500);
 
     String client_id = "noid-client-" + String(WiFi.macAddress());
+
     if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password))
     {
       mqtt_client.subscribe(mqtt_topic_control);
-      mqtt_client.subscribe(mqtt_topic_web);
+      mqtt_client.subscribe(mqtt_topic_connected);
       mqtt_client.subscribe(mqtt_topic_relay_mode);
       mqtt_client.subscribe(mqtt_topic_bulk_control);
 
@@ -214,6 +206,7 @@ void connectToMQTTBroker()
 void receivedMessage(char *topic, byte *payload, unsigned int length)
 {
   String message;
+
   for (unsigned int i = 0; i < length; i++)
   {
     message += (char)payload[i];
@@ -225,12 +218,17 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
   Serial.print(": ");
   Serial.println(message);
 
-  if (String(topic) == mqtt_topic_web)
+  if (String(topic) == mqtt_topic_connected)
   {
-    if (message == "init")
+    if (message == "online")
     {
+      isClientOnline = true;
       callRelayState();
       publishModeStatus();
+    }
+    else
+    {
+      isClientOnline = false;
     }
   }
 
@@ -403,26 +401,11 @@ void publishMessage(const char *topic, const char *dataType)
   Serial.println(success ? "Success" : " Error");
 }
 
-// Publish relay status
-void publishRelayStatus()
-{
-  publishMessage(mqtt_topic_status, "status");
-}
-
-// Publish relay duration
-void publishRelayDuration()
-{
-  publishMessage(mqtt_topic_duration, "duration");
-}
-
-// Publish relay runtime
-void publishRelayRuntime()
-{
-  publishMessage(mqtt_topic_runtime, "runtime");
-}
-
 void publishModeStatus()
 {
+  if (!isClientOnline)
+    return;
+
   StaticJsonDocument<256> doc;
   doc["mode"] = deviceMode;
   doc["date"] = startDate;        // Send startDate as is
@@ -445,6 +428,24 @@ void publishModeStatus()
   Serial.print(mqtt_topic_device_mode);
   Serial.print(": ");
   Serial.println(success ? "Success" : " Error");
+}
+
+// Publish relay status
+void publishRelayStatus()
+{
+  publishMessage(mqtt_topic_status, "status");
+}
+
+// Publish relay duration
+void publishRelayDuration()
+{
+  publishMessage(mqtt_topic_duration, "duration");
+}
+
+// Publish relay runtime
+void publishRelayRuntime()
+{
+  publishMessage(mqtt_topic_runtime, "runtime");
 }
 
 void scheduleRelays(String message)
@@ -585,80 +586,11 @@ time_t getScheduleTime()
   return scheduledEpoch;
 }
 
-void getLocation()
-{
-  WiFiClientSecure client;
-  client.setInsecure();
-
-  if (!client.connect(host, 443))
-  {
-    Serial.println("Connection to ipstack API failed!");
-    return;
-  }
-
-  // Send HTTP request
-  String url = "/check?access_key=" + API_KEY;
-  client.println("GET " + url + " HTTP/1.1");
-  client.println("Host: " + String(host));
-  client.println("Connection: close");
-  client.println();
-
-  // Read the response
-  String response = "";
-  while (client.connected() || client.available())
-  {
-    String line = client.readStringUntil('\n');
-    if (line == "\r")
-      break; // End of headers
-    response += line;
-  }
-
-  // Read JSON body
-  String jsonBody = "";
-  while (client.available())
-  {
-    jsonBody += client.readString();
-  }
-
-  client.stop();
-
-  // Remove non-JSON characters (like chunked encoding size)
-  jsonBody.trim(); // Remove leading/trailing whitespace
-  int startIndex = jsonBody.indexOf('{');
-  if (startIndex >= 0)
-  {
-    jsonBody = jsonBody.substring(startIndex); // Keep only the JSON part
-  }
-
-  // Debug: Print cleaned JSON body
-  Serial.println("Cleaned JSON Body:");
-  Serial.println(jsonBody);
-
-  // Parse JSON
-  DynamicJsonDocument doc(1024);
-  DeserializationError error = deserializeJson(doc, jsonBody);
-
-  if (error)
-  {
-    Serial.print("JSON Parsing failed: ");
-    Serial.println(error.c_str());
-    return;
-  }
-
-  // Extract required data
-  double latitude = doc["latitude"];
-  double longitude = doc["longitude"];
-  String city = doc["city"];
-  String region = doc["region_name"];
-  String country = doc["country_name"];
-
-  Serial.println("Real-Time Location Data:");
-  Serial.printf("Latitude: %f, Longitude: %f\n", latitude, longitude);
-  Serial.printf("City: %s, Region: %s, Country: %s\n", city.c_str(), region.c_str(), country.c_str());
-}
-
 void callRelayState()
 {
+  if (!isClientOnline)
+    return;
+
   publishRelayStatus();
   publishRelayDuration();
   publishRelayRuntime();
@@ -666,9 +598,11 @@ void callRelayState()
 
 void loop()
 {
-  if (!WiFi.status() == WL_CONNECTED)
+  if (WiFi.status() != WL_CONNECTED)
   {
+    Serial.println("[WIFI LOST] Reconnecting...");
     connectToWiFi();
+    return;
   }
 
   if (!mqtt_client.connected())
