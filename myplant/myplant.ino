@@ -23,13 +23,14 @@ const char *mqtt_password = "myplant12345";
 // MQTT topics
 const char *mqtt_topic_control = "myplant/control";          // for control spesific keran
 const char *mqtt_topic_bulk_control = "myplant/bulkcontrol"; // for bulkcontrol keran
-const char *mqtt_topic_connected = "myplant/connected";      // initial for online | offline web clinet, only publish when client online
+const char *mqtt_topic_device_connected = "myplant/device/connected";  // initial for online | offline this device, only publish when device online
+const char *mqtt_topic_web_connected= "myplant/web/connected";     // initial for online | offline web clinet, only publish when client online
 const char *mqtt_topic_status = "myplant/status";            // status keran RUNNING | PAUSED | OFF
 const char *mqtt_topic_duration = "myplant/duration";        // for runtime duration in ms
 const char *mqtt_topic_runtime = "myplant/runtime";          // for runtime keran in ms
 const char *mqtt_topic_relay_mode = "myplant/keranmode";     // for spesific keran mode "now" | "datetime"
 const char *mqtt_topic_device_mode = "myplant/devicemode";   // for device mode SCHEDULE | MANUAL
-
+const char *mqtt_topic_confirm = "myplant/confirm";   // for confirmation / ack
 // Number of relays
 const int numberOfRelays = 12;
 
@@ -40,7 +41,7 @@ const int numberOfRelays = 12;
 std::vector<int> relayPins = {22, 23, 5, 18, 21, 19, 27, 14, 26, 4, 32, 33}; // Ensure this matches the number of relays
 
 // Pins for RGB LED
-const int wifiLedPin = 12; // GPIO pin for Wifi status LED
+const int wifiLedPin = 12;   // GPIO pin for Wifi status LED
 const int mqttLedPin = 13; // GPIO pin for MQTT status LED
 
 unsigned long wifiPreviousMillis = 0;
@@ -130,73 +131,68 @@ void setup()
   publishModeStatus();
 }
 
-void updateWifiLED()
-{
+void updateWifiLED() {
   unsigned long currentMillis = millis();
 
   // WiFi LED logic
-  if (currentMillis - wifiPreviousMillis >= blinkInterval)
-  {
+  if (currentMillis - wifiPreviousMillis >= blinkInterval) {
     wifiPreviousMillis = currentMillis;
     wifiLedState = !wifiLedState;
     digitalWrite(wifiLedPin, wifiLedState);
   }
 }
 
-void updateMqttLED()
-{
+void updateMqttLED(){
   unsigned long currentMillis = millis();
   // MQTT LED logic
-  if (currentMillis - mqttPreviousMillis >= blinkInterval)
-  {
+  if (currentMillis - mqttPreviousMillis >= blinkInterval) {
     mqttPreviousMillis = currentMillis;
     mqttLedState = !mqttLedState;
     digitalWrite(mqttLedPin, mqttLedState);
   }
 }
 
-void connectToWiFi()
-{
+void connectToWiFi() {
   int attempts = 0;
-  while (WiFi.status() != WL_CONNECTED && attempts++ < 20)
-  {
+  while (WiFi.status() != WL_CONNECTED && attempts++ < 20) {
     Serial.print(".");
     updateWifiLED();
     delay(500);
   }
 
-  if (WiFi.status() == WL_CONNECTED)
-  {
+  if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\n[WIFI CONNECTED]");
     digitalWrite(wifiLedPin, HIGH);
-  }
-  else
-  {
+  } else {
     Serial.println("\n[WIFI CONNECTION TIMEOUT]");
   }
 }
 
-void connectToMQTTBroker()
-{
-  while (!mqtt_client.connected())
-  {
+void connectToMQTTBroker() {
+  while (!mqtt_client.connected()) {
     Serial.print("Connecting to MQTT...");
     delay(500);
-
+    
     String client_id = "noid-client-" + String(WiFi.macAddress());
 
-    if (mqtt_client.connect(client_id.c_str(), mqtt_username, mqtt_password))
-    {
+    if (mqtt_client.connect(
+        client_id.c_str(),
+        mqtt_username,
+        mqtt_password,
+        mqtt_topic_device_connected, // LWT topic
+        1,
+        true,
+        "offline"
+)) {
       mqtt_client.subscribe(mqtt_topic_control);
-      mqtt_client.subscribe(mqtt_topic_connected);
+      mqtt_client.subscribe(mqtt_topic_web_connected);
       mqtt_client.subscribe(mqtt_topic_relay_mode);
       mqtt_client.subscribe(mqtt_topic_bulk_control);
 
       Serial.println("[MQTT CONNECTED]");
+      mqtt_client.publish(mqtt_topic_device_connected, "online");
       digitalWrite(mqttLedPin, HIGH);
-    }
-    else
-    {
+    } else {
       Serial.println("Failed to connect to MQTT broker. Retrying in 5 seconds...");
       delay(5000);
     }
@@ -206,9 +202,8 @@ void connectToMQTTBroker()
 void receivedMessage(char *topic, byte *payload, unsigned int length)
 {
   String message;
-
-  for (unsigned int i = 0; i < length; i++)
-  {
+  
+  for (unsigned int i = 0; i < length; i++){
     message += (char)payload[i];
   }
 
@@ -218,16 +213,14 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
   Serial.print(": ");
   Serial.println(message);
 
-  if (String(topic) == mqtt_topic_connected)
+  if (String(topic) == mqtt_topic_web_connected)
   {
     if (message == "online")
     {
       isClientOnline = true;
       callRelayState();
       publishModeStatus();
-    }
-    else
-    {
+    } else {
       isClientOnline = false;
     }
   }
@@ -240,6 +233,8 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
   else if (String(topic) == mqtt_topic_relay_mode)
   {
     scheduleRelays(message);
+    publishModeStatus();
+    mqtt_client.publish(mqtt_topic_confirm, "ok");
   }
 
   else if (String(topic) == mqtt_topic_bulk_control)
@@ -247,6 +242,7 @@ void receivedMessage(char *topic, byte *payload, unsigned int length)
     resetAllStates();
     bulkControl(message);
     publishModeStatus();
+    mqtt_client.publish(mqtt_topic_confirm, "ok");
   }
 }
 
@@ -319,6 +315,7 @@ void controlRelay(int relayID, String command, int duration)
   if (relayID < 0 || relayID >= numberOfRelays)
   {
     Serial.println("Invalid relay index.");
+    mqtt_client.publish(mqtt_topic_confirm, "error");
     return;
   }
 
@@ -359,6 +356,7 @@ void controlRelay(int relayID, String command, int duration)
     lastMillis[relayID] = millis(); // Reset start time
   }
 
+  mqtt_client.publish(mqtt_topic_confirm, "ok");
   callRelayState();
 }
 
@@ -403,8 +401,7 @@ void publishMessage(const char *topic, const char *dataType)
 
 void publishModeStatus()
 {
-  if (!isClientOnline)
-    return;
+  if (!isClientOnline) return;
 
   StaticJsonDocument<256> doc;
   doc["mode"] = deviceMode;
@@ -491,7 +488,6 @@ void scheduleRelays(String message)
 
   sequenceActive = true;
   currentRelayIndex = 0;
-  publishModeStatus(); // Publish initial mode status with the scheduled start time
 }
 
 void activateNextRelay()
@@ -588,8 +584,7 @@ time_t getScheduleTime()
 
 void callRelayState()
 {
-  if (!isClientOnline)
-    return;
+  if (!isClientOnline) return;
 
   publishRelayStatus();
   publishRelayDuration();
@@ -604,7 +599,7 @@ void loop()
     connectToWiFi();
     return;
   }
-
+    
   if (!mqtt_client.connected())
   {
     updateMqttLED();
@@ -640,6 +635,7 @@ void loop()
       }
     }
   }
+
 }
 
 void resetAllStates() /// Reset other global variables
