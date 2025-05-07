@@ -54,10 +54,14 @@ export const CardItem = ({
     const [newDuration, setNewDuration]= useState(isNewDuration ? duration : 0)
     const [isDurationNewActive, setIsDurationNewActive] = useState(false)
 
+    const [loadingButton, setLoadingButton] = useState<typeof status | null>(null);
+    const [isConfirmLoading, setIsConfirmLoading] = useState(false)
 
     const [ConfirmMode, confirm] = useConfirm(
         `Yakin ingin mengubah ke mode ${onMode === "NO TIMER" ? "AUTO TIMER" : "MANUAL TIMER"}?`,
-        "Ini akan mematikan keran dan mereset waktu terlebih dahulu"
+        "Ini akan mematikan keran dan mereset waktu terlebih dahulu",
+        isConfirmLoading,
+        setIsConfirmLoading
     )
 
     // Ref to store the previous onMode
@@ -81,9 +85,10 @@ export const CardItem = ({
     }
 
     const controlKeran = (action: typeof status) => {
+        setLoadingButton(action)
+        console.log({action})
         
         const topic = 'myplant/control'
-       
         const msgSuccess =`${label} berhasil ${action}...`
         const msgError =`${label} gagal ${action}...`
 
@@ -93,7 +98,13 @@ export const CardItem = ({
                         duration: onDuration
                     })
         
-        publishMessage({topic, msg, msgSuccess, msgError})
+        publishMessage({
+            topic, 
+            msg, 
+            msgSuccess, 
+            msgError, 
+            onDone: () => setLoadingButton(null)
+        })
     }
 
     const handleControlButton = (action: typeof status) =>{
@@ -160,7 +171,9 @@ export const CardItem = ({
                     transition-all  
                     duration-500 
                     bg-primary-1`, 
-                    disabled ? "shadow-shadow-booked": "shadow-card-shadow",
+                    disabled 
+                    ? "shadow-shadow-booked"
+                    : "shadow-card-shadow",
                 )}
             >
                 <div
@@ -218,8 +231,7 @@ export const CardItem = ({
                     </div>
                 </div>
                 {
-                    onMode === "TIMER" &&
-                    (
+                    onMode === "TIMER" && (
                     <div 
                         className={cn(`
                             w-full
@@ -284,6 +296,9 @@ export const CardItem = ({
                     handleStop={() => handleControlButton("OFF")}
                     handlePlay={() => handleControlButton("RUNNING")}
                     handlePause={() => handleControlButton("PAUSED")}
+                    isLoadingStop={loadingButton === "OFF"}
+                    isLoadingPlay={loadingButton === "RUNNING"}
+                    isLoadingPause={loadingButton === "PAUSED"}
                 />
             {
 

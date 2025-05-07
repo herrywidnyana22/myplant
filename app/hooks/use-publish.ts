@@ -6,27 +6,56 @@ type UsePublishProps = {
     msg: string
     msgSuccess: string
     msgError: string
-};
+    onDone?: () => void
+}
 
-export const  usePublish = () => {
-    const { client } = useMqtt()
-    
-    const publishMessage = ({ topic, msg, msgSuccess, msgError }: UsePublishProps) => {
-        if (client) {
-            client.publish(topic, msg, (err) => {
-                if (err) {
-                    console.error('Failed to publish message:', err);
-                    return toast.error(msgError)
-                } else {
-                    console.log('Message published successfully:', msg);
-                    return toast.success(msgSuccess)
-                }
-            })
-        } else {
-            console.error('MQTT client not connected')
-            return toast.error('MQTT client not connected')
+export const usePublish = () => {
+    const { client, connectStatus } = useMqtt()
+
+    const publishMessage = ({ 
+        topic, 
+        msg, 
+        msgSuccess, 
+        msgError,
+        onDone
+    }: UsePublishProps) => {
+
+        if (!client) {
+            toast.error("MQTT client not connected")
+            onDone?.()
+            return
         }
-    };
+
+        if (connectStatus === "DEVICE DISCONNECTED") {
+            toast.error("Device offline...!")
+            onDone?.()
+            return
+        }
+
+        client.publish(topic, msg, (err) => {
+        if (err) {
+            toast.error(msgError)
+            onDone?.()
+            return
+        }
+
+        // Wait for ACK response
+        const confirmationTimeout = setTimeout(() => {
+            toast.error("Tidak dapat terhubung ke device...!")
+            onDone?.()
+        }, 5000)
+
+        client.once("message", (confirmTopic, payload) => {
+            if (confirmTopic !== "myplant/confirm") return
+
+                const message = payload.toString()
+                toast.success(message === "ok" ? msgSuccess : msgError)
+
+                clearTimeout(confirmationTimeout)
+                onDone?.()
+            })
+        })
+    }
 
     return { publishMessage }
-};
+}

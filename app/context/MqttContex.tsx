@@ -3,10 +3,16 @@
 import mqtt, { MqttClient } from 'mqtt';
 import { MqttStatusProps } from '../types/MqttStatustype';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { toast } from 'sonner';
 
-
-const TOPICS = ['myplant/status', 'myplant/duration', 'myplant/runtime', 'myplant/devicemode']
+const TOPICS = [
+  'myplant/status',
+  'myplant/duration',
+  'myplant/runtime',
+  'myplant/devicemode',
+  'myplant/device/connected',   // Track Arduino
+  'myplant/web/connected',      // Track web client
+  'myplant/confirm'
+]
 
 const ConnectionStatus = {
   ONLINE: 'online',
@@ -34,7 +40,7 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children
             password: process.env.NEXT_PUBLIC_MQTT_PASSWORD,
             clean: true,
             will: {
-                topic: 'myplant/connected',
+                topic: 'myplant/web/connected',
                 payload: ConnectionStatus.OFFLINE,
                 qos: 1,
                 retain: true
@@ -42,30 +48,38 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
 
         mqttClient.on('connect', () => {
-            console.log('MQTT Client connected')
 
             TOPICS.forEach((topic) => {
-                mqttClient.subscribe(topic, (err) => {
-                    if (err) {
-                        toast.error(`Failed to subscribe to ${topic}`);
-                    }
-                })
+                mqttClient.subscribe(topic)
             })
 
             mqttClient.publish(
-                'myplant/connected',
+                'myplant/web/connected',
                 ConnectionStatus.ONLINE,
-                { qos: 1, retain: true }
+                { 
+                    qos: 1, 
+                    retain: true 
+                }
             )
         })
 
-        mqttClient.on('error', (err) => {
-            console.error('MQTT Client error:', err.message)
+        mqttClient.on('error', () => {
             setConnectStatus('OFF')
         })
 
         mqttClient.on('reconnect', () => {
-            console.log('MQTT Client reconnecting...')
+            setConnectStatus("CONNECTING")
+        })
+
+        mqttClient.on('message', (topic, message) => {
+            if (topic !== "myplant/device/connected") return
+
+            const status = message.toString();
+            setConnectStatus(
+                status === "online" 
+                    ? "DEVICE CONNECTED" 
+                    : "DEVICE DISCONNECTED"
+            )
         })
 
         setClient(mqttClient)

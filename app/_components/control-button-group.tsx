@@ -7,10 +7,22 @@ type ControlButtonGroupProps = {
     handleStop: () => void
     handlePlay: () => void
     handlePause: () => void
+    isLoadingPlay: boolean
+    isLoadingPause: boolean
+    isLoadingStop: boolean
     className?: string
 } & KeranStatusProps
 
-export const ControlButtonGroup = ({status, handleStop, handlePlay, handlePause, className }: ControlButtonGroupProps) => {
+export const ControlButtonGroup = ({
+    status, 
+    handleStop, 
+    handlePlay, 
+    handlePause,
+    isLoadingPlay,
+    isLoadingPause,
+    isLoadingStop, 
+    className 
+}: ControlButtonGroupProps) => {
     return ( 
          <div 
             className={cn(`
@@ -25,9 +37,10 @@ export const ControlButtonGroup = ({status, handleStop, handlePlay, handlePause,
         >
             <ControlButton
                 onClick={handleStop}
+                isLoading={isLoadingStop}
                 status={status}
                 icon={Square}
-                iconClassName={"size-5 bg-rose-500 text-rose-500 rounded-sm"}
+                iconClassName={"size-5 text-rose-500 bg-rose-500 rounded-sm"}
                 className={(status === "RUNNING" ||  status === "PAUSED") 
                     ? 'shadow-shadow-button' 
                     : 'opacity-50 pointer-events-none'
@@ -35,6 +48,7 @@ export const ControlButtonGroup = ({status, handleStop, handlePlay, handlePause,
             />
             <ControlButton 
                 onClick={handlePlay}
+                isLoading={isLoadingPlay}
                 status={status}
                 icon={Play}
                 iconClassName={"size-8 text-green-500"}
@@ -45,6 +59,7 @@ export const ControlButtonGroup = ({status, handleStop, handlePlay, handlePause,
             />
             <ControlButton 
                 onClick={handlePause}
+                isLoading={isLoadingPause}
                 status={status}
                 icon={Pause}
                 iconClassName={"size-5 text-orange-500"}

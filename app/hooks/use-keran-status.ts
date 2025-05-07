@@ -61,14 +61,11 @@ export const useKeranStatus = () => {
 
     // Handle messages from the subscribed topics
     const handleMessage = (topic: string, message: Buffer) => {
-        console.log("Topic:", topic);
-        console.log("Message:", message.toString())
 
         try {
-            const parsedMessage = JSON.parse(message.toString())
-
+            
             if (topic === 'myplant/status') { //{"1":"OFF","2":"OFF","3":"OFF","4":"OFF","5":"OFF","6":"OFF","7":"OFF","8":"OFF","9":"OFF","10":"OFF","11":"OFF","12":"OFF"}
-                
+                const parsedMessage = JSON.parse(message.toString())
                 const statusArray: StatusMessageProps[] = Object.entries(parsedMessage).map(
                     ([key, value]) => ({
                         name: `keran${key}`,
@@ -80,6 +77,7 @@ export const useKeranStatus = () => {
                 setStatusReceived(true)
                 
             } else if (topic === 'myplant/duration') { //{"1":0,"2":0,"3":0,"4":0,"5":0,"6":0,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0}
+                const parsedMessage = JSON.parse(message.toString())
                 const durationArray: DurationMessageProps[] = Object.entries(parsedMessage).map(
                     ([key, value]) => ({
                         name: `keran${key}`,
@@ -91,7 +89,7 @@ export const useKeranStatus = () => {
                 setDurationReceived(true)
 
             } else if (topic === 'myplant/runtime') { //{"1":0,"2":0,"3":0,"4":0,"5":0,"6":59132,"7":0,"8":0,"9":0,"10":0,"11":0,"12":0}
-                
+                const parsedMessage = JSON.parse(message.toString())
                 const runtimeArray: RuntimeMessageProps[] = Object.entries(parsedMessage).map(
                     ([key, value]) => ({
                         name: `keran${key}`,
@@ -102,6 +100,7 @@ export const useKeranStatus = () => {
                 setRuntimeReceived(true)
             
             } else if (topic === 'myplant/devicemode') { //{"mode":"MANUAL","date":"","time":"","duration":0,"booked":[]}
+                const parsedMessage = JSON.parse(message.toString())
                 if (
                     typeof parsedMessage.mode === 'string' &&
                     (parsedMessage.mode === 'MANUAL' || parsedMessage.mode === 'SCHEDULE')

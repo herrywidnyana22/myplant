@@ -6,11 +6,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 import { CustomButton } from "../_components/custom-button"
 import { useState } from "react"
+import { Loader2 } from "lucide-react"
 
 
 export const useConfirm = (
     title: string,
-    msg: string
+    msg: string,
+    isLoading: boolean,
+    setIsLoading: (val: boolean) => void
 ): [() => JSX.Element, () => Promise<unknown>] => {
    
     const [promise, setPromise,] = useState<{ resolve: (value:boolean) => void  } | null>(null)
@@ -24,13 +27,17 @@ export const useConfirm = (
     }
 
     const onCancel = () =>{
+        setIsLoading(false)
         promise?.resolve(false)
         onClose()
     }
 
     const onConfirm = () =>{
-        promise?.resolve(true)
-        onClose()
+        if(!isLoading){
+            promise?.resolve(true)
+            onClose()
+
+        }
     }
 
     const ConfirmDialog = () =>(
@@ -55,6 +62,7 @@ export const useConfirm = (
                     "
                 >
                     <Button
+                        disabled={isLoading}
                         variant={"outline"}
                         onClick={onCancel}
                     >
@@ -62,10 +70,14 @@ export const useConfirm = (
                     </Button>
                     <CustomButton
                         onClick={onConfirm}
-                        disabled={false}
+                        disabled={isLoading}
                         className="bg-font-primary"
                     >
-                        Confirm
+                        {
+                            isLoading
+                            ? <Loader2 className="size-4 animate-spin" />
+                            : "Confirm"
+                        }
                     </CustomButton>
                 </DialogFooter>
             </DialogContent>

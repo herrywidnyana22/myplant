@@ -25,13 +25,16 @@ export const Card = () => {
     const [dateLabel, setDateLabel] = useState<string | null>(null)
     const [durationLabel, setDurationLabel] = useState<string | null>(null)
     const [runningNames, setRunningNames] = useState<string>("")
-    const [numOfRunning,setNumOfRunning] = useState(0)
+    const [numOfRunning, setNumOfRunning] = useState(0)
+    const [isLoading, setIsloading] = useState(false)
 
     const { publishMessage } = usePublish()
 
     const [ConfirmSwitched, confirm] = useConfirm(
         `Yakin ingin mengubah mode?`,
-        "Ini akan mematikan semua keran terlebih dahulu"
+        "Ini akan mematikan semua keran terlebih dahulu",
+        isLoading,
+        setIsloading
     )
 
     useEffect(() => {
@@ -107,7 +110,8 @@ export const Card = () => {
     }
 
     const controlKeran = (action: KeranStatusProps["status"], data: (number | null)[], duration: number) => {
-    
+        setIsloading(true)
+
         const topic = 'myplant/bulkcontrol'
         
         const msgSuccess =`Semua keran berhasil di-OFF kan...`
@@ -119,11 +123,15 @@ export const Card = () => {
                         duration
                     })
         
-        publishMessage({topic, msg, msgSuccess, msgError})
+        publishMessage({
+            topic, 
+            msg, 
+            msgSuccess, 
+            msgError,
+            onDone: () => setIsloading(false)
+        })
     }
 
-    console.log({keranData})
-    console.log({deviceModeMsg})
     return ( 
     <>
         <div
@@ -162,91 +170,95 @@ export const Card = () => {
                     >
                         Noid 1
                     </p>
-                    
                 </div>
-                    <DynamicIsland>
-                    {       
-                        (dateLabel || durationLabel) && (
-                        <>
-                            <span className='flex gap-2 items-center'>
-                                <CalendarClock className='size-4' />
-                                <p>{dateLabel}</p>
-                            </span>
-                            <span className='flex gap-2 items-center'>
-                                <Clock className='size-4' />
-                                <p>{durationLabel}</p>
-                            </span>
-
-                        </>
-                    )}
-                    {
-                        runningNames !== "" &&
-                        <Hint label={`${numOfRunning} ON: ${runningNames}`}>
-                            <span className='flex gap-2'>
-                                <Play className='size-4 flex-shrink-0' />
-                                <p className='truncate'>{runningNames}</p>
-                            </span>
-                        </Hint>
-                    }
-
-                    </DynamicIsland>
-                <div
-                    className="
-                        flex 
-                        items-center
-                        gap-4
-                    "
-                >
                 {
-                    keranData.length > 0 &&
-                    <div 
-                        className='
-                            text-slate-500
-                            cursor-pointer 
-                        '
-                    >
-                    {
-                        !isCollapse 
-                        ? (
+                    connectStatus === "DEVICE CONNECTED" && 
+                    <>
+                        <DynamicIsland>
+                        {       
+                            (dateLabel || durationLabel) && (
+                            <>
+                                <span className='flex gap-2 items-center'>
+                                    <CalendarClock className='size-4' />
+                                    <p>{dateLabel}</p>
+                                </span>
+                                <span className='flex gap-2 items-center'>
+                                    <Clock className='size-4' />
+                                    <p>{durationLabel}</p>
+                                </span>
 
-                            <Hint label='Collapse'>
-                                <div onClick={() => setIsCollapse(true)} >
-                                    <Layers className='size-4'/>
-                                </div>
+                            </>
+                        )}
+                        {
+                            runningNames !== "" &&
+                            <Hint label={`${numOfRunning} ON: ${runningNames}`}>
+                                <span className='flex gap-2'>
+                                    <Play className='size-4 flex-shrink-0' />
+                                    <p className='truncate'>{runningNames}</p>
+                                </span>
                             </Hint>
-                        ) : (
+                        }
 
-                            <Hint label='Expand'>
-                                <div onClick={() => setIsCollapse(false)}>
-                                    <SquareStack className='size-4'/>
-                                </div>
-                            </Hint>
-                        )
-                    }
-                    </div>
-                }
-                {
-                    connectStatus === "DEVICE CONNECTED" &&
-                    <PopoverSpecialMode 
-                        data={keranData}
-                        open={isSpesialMode}
-                        onOpenChange={(open) => setIsSpesialMode(open)}
-                    >
-                        <Settings 
-                            onClick={handleSettingsClick}
-                            className='
-                                size-5 
-                                cursor-pointer 
-                                text-font-primary
-                            '
-                        />
-                    </PopoverSpecialMode>
-                }
-                </div>
+                        </DynamicIsland>
+                        <div
+                            className="
+                                flex 
+                                items-center
+                                gap-4
+                            "
+                        >
+                        {
+                            keranData.length > 0 &&
+                            <div 
+                                className='
+                                    text-slate-500
+                                    cursor-pointer 
+                                '
+                            >
+                            {
+                                !isCollapse 
+                                ? (
+
+                                    <Hint label='Collapse'>
+                                        <div onClick={() => setIsCollapse(true)} >
+                                            <Layers className='size-4'/>
+                                        </div>
+                                    </Hint>
+                                ) : (
+
+                                    <Hint label='Expand'>
+                                        <div onClick={() => setIsCollapse(false)}>
+                                            <SquareStack className='size-4'/>
+                                        </div>
+                                    </Hint>
+                                )
+                            }
+                            </div>
+                        }
+                        {
+                            connectStatus === "DEVICE CONNECTED" &&
+                            <PopoverSpecialMode 
+                                data={keranData}
+                                open={isSpesialMode}
+                                onOpenChange={(open) => setIsSpesialMode(open)}
+                            >
+                                <Settings 
+                                    onClick={handleSettingsClick}
+                                    className='
+                                        size-5 
+                                        cursor-pointer 
+                                        text-font-primary
+                                    '
+                                />
+                            </PopoverSpecialMode>
+                        }
+                        </div>
+                    </>
+                }   
 
             </div>
             {
-                connectStatus === "DEVICE CONNECTED" 
+                connectStatus === "DEVICE CONNECTED"
                 ? (
                     <div
                         className={cn(` 
@@ -279,7 +291,7 @@ export const Card = () => {
                             ))
                         }
                     </div>
-                ) : <p className='text-center text-slate-400 italic'>Device disconnected</p>
+                ) : <p className='text-center text-slate-400 italic'>Device tidak terhubung, silahkan cek device</p>
             }
         </div>
         <ConfirmSwitched/>
