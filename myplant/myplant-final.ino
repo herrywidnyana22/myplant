@@ -19,7 +19,8 @@
 
 const char *ssid = "HAI";
 const char *password = "wifi*123#";
-const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
+// const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
+const char *mqtt_broker = "r62511cd.ala.us-east-1.emqxsl.com";
 const int mqtt_port = 8883;
 const char *mqtt_username = "myplant";
 const char *mqtt_password = "myplant12345";
