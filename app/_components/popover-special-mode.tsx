@@ -2,6 +2,7 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
+  PopoverClose,
 } from "@/components/ui/popover";
 import {
   DragDropContext,
@@ -9,6 +10,7 @@ import {
   Droppable,
   DropResult,
 } from "@hello-pangea/dnd";
+
 import { KeranDataProps } from "../hooks/use-keran-status";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,7 @@ import { DurationButtonNew } from "./duration-button-new";
 import { Hint } from "./hint";
 import { toast } from "sonner";
 import { usePublish } from "../hooks/use-publish";
+import { X } from "lucide-react";
 
 type PopoverSpecialModeProps = {
   children: React.ReactNode;
@@ -181,7 +184,16 @@ export const PopoverSpecialMode = ({
                     animate-none
                 "
       >
-        <div className="flex min-h-[24rem] flex-col overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-xl shadow-slate-100">
+        <div className="relative flex min-h-[24rem] flex-col overflow-hidden rounded-[28px] border border-neutral-200 bg-white shadow-xl shadow-slate-100">
+          <PopoverClose asChild>
+            <button
+              type="button"
+              className="absolute right-4 top-4 inline-flex size-10 items-center justify-center rounded-full text-slate-500 transition hover:bg-rose-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-font-primary"
+            >
+              <X className="size-4" />
+              <span className="sr-only">Close</span>
+            </button>
+          </PopoverClose>
           <div className="px-4 py-3 md:px-5 md:py-4">
             <h1 className="text-xl font-semibold text-slate-900">
               Mode Spesial

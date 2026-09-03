@@ -17,8 +17,20 @@
 // NEXT_PUBLIC_MQTT_USERNAME='myplant'
 // NEXT_PUBLIC_MQTT_PASSWORD='myplant12345'
 
-const char *ssid = "HAI";
-const char *password = "wifi*123#";
+const char *ssidList[] = {
+    "HAI",
+    "GUDANG POJOK",
+    "TP-Link_0BA8",
+};
+
+const char *passwordList[] = {
+    "wifi*123#",
+    "gudang_pojok629",
+    "16275676",
+};
+
+const int wifiNetworksCount = sizeof(ssidList) / sizeof(ssidList[0]);
+
 // const char *mqtt_broker = "u67e3c9f.ala.asia-southeast1.emqxsl.com";
 const char *mqtt_broker = "r62511cd.ala.us-east-1.emqxsl.com";
 const int mqtt_port = 8883;
@@ -40,10 +52,10 @@ const char *mqtt_topic_confirm = "myplant/confirm";                   // for con
 const int numberOfRelays = 12;
 
 // Pin assignments for relays
-// 1-D23, 2-D22, 3-D5, 4-D21, 5-D19, 6-D18
-// 7-D26, 8-D14, 9-D27, 10-D04, 11-D32, 12-D33
+// 1-D22, 2-D23, 3-D5, 4-D18, 5-D21, 6-D19
+// 7-D27, 8-D14, 9-D26, 10-D04, 11-D32, 12-D33
 
-std::vector<int> relayPins = {23, 22, 5, 21, 19, 18, 26, 14, 27, 4, 32, 33}; // Ensure this matches the number of relays
+std::vector<int> relayPins = {22, 23, 5, 18, 21, 19, 27, 14, 26, 4, 32, 33}; // Ensure this matches the number of relays
 
 // Pins for RGB LED
 const int wifiLedPin = 12; // GPIO pin for Wifi status LED
@@ -51,7 +63,8 @@ const int mqttLedPin = 13; // GPIO pin for MQTT status LED
 
 unsigned long wifiPreviousMillis = 0;
 unsigned long mqttPreviousMillis = 0;
-const long blinkInterval = 1400; // 1.4 seconds for blink led connection
+const long blinkInterval = 1400;    // 1.4 seconds for WiFi blink
+const long mqttBlinkInterval = 300; // 0.3 seconds for MQTT blink
 
 bool isClientOnline = false;
 bool wifiLedState = false;
@@ -110,13 +123,11 @@ void setup()
 
     espClient.setInsecure();
 
-    WiFi.begin(ssid, password);
     connectToWiFi();
 
     mqtt_client.setServer(mqtt_broker, mqtt_port);
     mqtt_client.setCallback(receivedMessage);
-
-    // connectToMQTTBroker();
+    connectToMQTTBroker();
 
     // Initialize Relays
     for (int pin : relayPins)
@@ -153,7 +164,7 @@ void updateMqttLED()
 {
     unsigned long currentMillis = millis();
     // MQTT LED logic
-    if (currentMillis - mqttPreviousMillis >= blinkInterval)
+    if (currentMillis - mqttPreviousMillis >= mqttBlinkInterval)
     {
         mqttPreviousMillis = currentMillis;
         mqttLedState = !mqttLedState;
@@ -163,42 +174,78 @@ void updateMqttLED()
 
 void connectToWiFi()
 {
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts++ < 20)
-    {
-        Serial.print(".");
-        updateWifiLED();
-        delay(500);
-    }
+    WiFi.mode(WIFI_STA);
 
-    if (WiFi.status() == WL_CONNECTED)
+    while (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println("\n[WIFI CONNECTED]");
-        digitalWrite(wifiLedPin, HIGH);
-    }
-    else
-    {
-        Serial.println("\n[WIFI CONNECTION TIMEOUT]");
+        for (int networkIndex = 0; networkIndex < wifiNetworksCount; networkIndex++)
+        {
+            const char *ssid = ssidList[networkIndex];
+            const char *password = passwordList[networkIndex];
+
+            Serial.print("Trying WiFi network: ");
+            Serial.println(ssid);
+
+            WiFi.disconnect(true);
+            WiFi.mode(WIFI_OFF);
+            delay(100);
+            WiFi.mode(WIFI_STA);
+            delay(100);
+            WiFi.begin(ssid, password);
+
+            unsigned long startAttemptTime = millis();
+            while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 10000)
+            {
+                updateWifiLED();
+                delay(500);
+            }
+
+            if (WiFi.status() == WL_CONNECTED)
+            {
+                Serial.println("\n[WIFI CONNECTED]");
+                Serial.print("Connected to SSID: ");
+                Serial.println(ssid);
+                digitalWrite(wifiLedPin, HIGH);
+                return;
+            }
+
+            Serial.println("Connection failed, trying next network...");
+        }
+
+        Serial.println("All networks failed, retrying...");
     }
 }
 
 void connectToMQTTBroker()
 {
+    mqttLedState = false;
+    mqttPreviousMillis = millis();
+    digitalWrite(mqttLedPin, LOW);
+
+    String client_id = "noid-client-" + String(WiFi.macAddress());
+
     while (!mqtt_client.connected())
     {
-        Serial.print("Connecting to MQTT...");
-        delay(500);
+        Serial.println("Connecting to MQTT...");
 
-        String client_id = "noid-client-" + String(WiFi.macAddress());
+        bool connected = mqtt_client.connect(
+            client_id.c_str(),
+            mqtt_username,
+            mqtt_password,
+            mqtt_topic_device_connected,
+            1,
+            true,
+            "offline");
 
-        if (mqtt_client.connect(
-                client_id.c_str(),
-                mqtt_username,
-                mqtt_password,
-                mqtt_topic_device_connected, // LWT topic
-                1,
-                true,
-                "offline"))
+        unsigned long attemptStart = millis();
+        while (!mqtt_client.connected() && millis() - attemptStart < 5000)
+        {
+            mqtt_client.loop();
+            updateMqttLED();
+            delay(100);
+        }
+
+        if (connected || mqtt_client.connected())
         {
             mqtt_client.subscribe(mqtt_topic_control);
             mqtt_client.subscribe(mqtt_topic_web_connected);
@@ -208,12 +255,10 @@ void connectToMQTTBroker()
             Serial.println("[MQTT CONNECTED]");
             mqtt_client.publish(mqtt_topic_device_connected, "online");
             digitalWrite(mqttLedPin, HIGH);
+            return;
         }
-        else
-        {
-            Serial.println("Failed to connect to MQTT broker. Retrying in 5 seconds...");
-            delay(5000);
-        }
+
+        Serial.println("Failed to connect to MQTT broker. Retrying...");
     }
 }
 

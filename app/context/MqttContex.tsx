@@ -54,6 +54,8 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
     );
 
     mqttClient.on("connect", () => {
+      setConnectStatus("MQTT CONNECTED");
+
       TOPICS.forEach((topic) => {
         mqttClient.subscribe(topic);
       });
@@ -64,12 +66,20 @@ export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({
       });
     });
 
-    mqttClient.on("error", () => {
+    mqttClient.on("reconnect", () => {
+      setConnectStatus("CONNECTING");
+    });
+
+    mqttClient.on("offline", () => {
       setConnectStatus("OFF");
     });
 
-    mqttClient.on("reconnect", () => {
-      setConnectStatus("CONNECTING");
+    mqttClient.on("close", () => {
+      setConnectStatus("OFF");
+    });
+
+    mqttClient.on("error", () => {
+      setConnectStatus("OFF");
     });
 
     mqttClient.on("message", (topic, message) => {
